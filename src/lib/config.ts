@@ -30,7 +30,7 @@ interface ConfigFileStruct {
   }[];
   lives?: {
     [key: string]: LiveCfg;
-  }
+  };
 }
 
 export const API_CONFIG = {
@@ -56,7 +56,6 @@ export const API_CONFIG = {
 // 在模块加载时根据环境决定配置来源
 let cachedConfig: AdminConfig;
 
-
 // 从配置文件补充管理员配置
 export function refineConfig(adminConfig: AdminConfig): AdminConfig {
   let fileConfig: ConfigFileStruct;
@@ -69,7 +68,7 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
   // 合并文件中的源信息
   const apiSitesFromFile = Object.entries(fileConfig.api_site || []);
   const currentApiSites = new Map(
-    (adminConfig.SourceConfig || []).map((s) => [s.key, s])
+    (adminConfig.SourceConfig || []).map((s) => [s.key, s]),
   );
 
   apiSitesFromFile.forEach(([key, site]) => {
@@ -107,7 +106,7 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
   // 覆盖 CustomCategories
   const customCategoriesFromFile = fileConfig.custom_category || [];
   const currentCustomCategories = new Map(
-    (adminConfig.CustomCategories || []).map((c) => [c.query + c.type, c])
+    (adminConfig.CustomCategories || []).map((c) => [c.query + c.type, c]),
   );
 
   customCategoriesFromFile.forEach((category) => {
@@ -131,7 +130,7 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
 
   // 检查现有 CustomCategories 是否在 fileConfig.custom_category 中，如果不在则标记为 custom
   const customCategoriesFromFileKeys = new Set(
-    customCategoriesFromFile.map((c) => c.query + c.type)
+    customCategoriesFromFile.map((c) => c.query + c.type),
   );
   currentCustomCategories.forEach((category) => {
     if (!customCategoriesFromFileKeys.has(category.query + category.type)) {
@@ -144,7 +143,7 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
 
   const livesFromFile = Object.entries(fileConfig.lives || []);
   const currentLives = new Map(
-    (adminConfig.LiveConfig || []).map((l) => [l.key, l])
+    (adminConfig.LiveConfig || []).map((l) => [l.key, l]),
   );
   livesFromFile.forEach(([key, site]) => {
     const existingLive = currentLives.get(key);
@@ -182,15 +181,18 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
   return adminConfig;
 }
 
-async function getInitConfig(configFile: string, subConfig: {
-  URL: string;
-  AutoUpdate: boolean;
-  LastCheck: string;
-} = {
-    URL: "",
+async function getInitConfig(
+  configFile: string,
+  subConfig: {
+    URL: string;
+    AutoUpdate: boolean;
+    LastCheck: string;
+  } = {
+    URL: '',
     AutoUpdate: false,
-    LastCheck: "",
-  }): Promise<AdminConfig> {
+    LastCheck: '',
+  },
+): Promise<AdminConfig> {
   let cfgFile: ConfigFileStruct;
   try {
     cfgFile = JSON.parse(configFile) as ConfigFileStruct;
@@ -208,8 +210,7 @@ async function getInitConfig(configFile: string, subConfig: {
       SearchDownstreamMaxPage:
         Number(process.env.NEXT_PUBLIC_SEARCH_MAX_PAGE) || 5,
       SiteInterfaceCacheTime: cfgFile.cache_time || 7200,
-      DoubanProxyType:
-        process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'direct',
+      DoubanProxyType: process.env.NEXT_PUBLIC_DOUBAN_PROXY_TYPE || 'direct',
       DoubanProxy: process.env.NEXT_PUBLIC_DOUBAN_PROXY || '',
       DoubanImageProxyType:
         process.env.NEXT_PUBLIC_DOUBAN_IMAGE_PROXY_TYPE || 'server',
@@ -217,8 +218,7 @@ async function getInitConfig(configFile: string, subConfig: {
       DisableYellowFilter:
         process.env.NEXT_PUBLIC_DISABLE_YELLOW_FILTER === 'true',
       ShowAdultContent: false, // 默认不显示成人内容，可在管理面板修改
-      FluidSearch:
-        process.env.NEXT_PUBLIC_FLUID_SEARCH !== 'false',
+      FluidSearch: process.env.NEXT_PUBLIC_FLUID_SEARCH !== 'false',
       // TMDB配置默认值
       TMDBApiKey: process.env.TMDB_API_KEY || '',
       TMDBLanguage: 'zh-CN',
@@ -240,13 +240,15 @@ async function getInitConfig(configFile: string, subConfig: {
   } catch (e) {
     console.error('获取用户列表失败:', e);
   }
-  const allUsers = userNames.filter((u) => u !== process.env.USERNAME).map((u) => ({
-    username: u,
-    role: 'user',
-    banned: false,
-    downloadLimitEnabled: true,
-    downloadLimitPerDay: 3,
-  }));
+  const allUsers = userNames
+    .filter((u) => u !== process.env.USERNAME)
+    .map((u) => ({
+      username: u,
+      role: 'user',
+      banned: false,
+      downloadLimitEnabled: true,
+      downloadLimitPerDay: 3,
+    }));
   allUsers.unshift({
     username: process.env.USERNAME!,
     role: 'owner',
@@ -315,7 +317,7 @@ export async function getConfig(): Promise<AdminConfig> {
 
   // db 中无配置，执行一次初始化
   if (!adminConfig) {
-    adminConfig = await getInitConfig("");
+    adminConfig = await getInitConfig('');
   }
   adminConfig = await configSelfCheck(adminConfig);
   cachedConfig = adminConfig;
@@ -328,12 +330,17 @@ export function clearConfigCache(): void {
   cachedConfig = null as any;
 }
 
-export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminConfig> {
+export async function configSelfCheck(
+  adminConfig: AdminConfig,
+): Promise<AdminConfig> {
   // 确保必要的属性存在和初始化
   if (!adminConfig.UserConfig) {
     adminConfig.UserConfig = { AllowRegister: true, Users: [] };
   }
-  if (!adminConfig.UserConfig.Users || !Array.isArray(adminConfig.UserConfig.Users)) {
+  if (
+    !adminConfig.UserConfig.Users ||
+    !Array.isArray(adminConfig.UserConfig.Users)
+  ) {
     adminConfig.UserConfig.Users = [];
   }
 
@@ -343,22 +350,50 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     const ownerUser = process.env.USERNAME;
 
     // 创建用户列表：保留数据库中存在的用户的配置信息
-    const updatedUsers = dbUsers.map(username => {
-      // 查找现有配置中是否有这个用户
-      const existingUserConfig = adminConfig.UserConfig.Users.find(u => u.username === username);
+    const updatedUsers = await Promise.all(
+      dbUsers.map(async (username) => {
+        // 查找现有配置中是否有这个用户
+        const existingUserConfig = adminConfig.UserConfig.Users.find(
+          (u) => u.username === username,
+        );
 
-      if (existingUserConfig) {
-        // 保留现有配置
-        return existingUserConfig;
-      } else {
-        // 新用户，创建默认配置
-        return {
-          username,
-          role: username === ownerUser ? ('owner' as const) : ('user' as const),
-          banned: false,
-        };
-      }
-    });
+        if (existingUserConfig) {
+          // 保留现有配置
+          return existingUserConfig;
+        } else {
+          // 新用户，创建默认配置
+          // 🔧 修复：尝试从数据库获取用户的首次登录时间作为 createdAt
+          let createdAt = Date.now(); // 默认使用当前时间
+          try {
+            const userStats = await db.getUserPlayStat(username);
+            // 使用首次登录时间作为注册时间
+            if (userStats.firstLoginTime) {
+              createdAt = userStats.firstLoginTime;
+            } else if (userStats.lastLoginTime) {
+              // 如果没有首次登录时间，使用最后登录时间作为后备
+              createdAt = userStats.lastLoginTime;
+            } else if (userStats.lastLoginDate) {
+              // 兼容旧字段
+              createdAt = userStats.lastLoginDate;
+            }
+          } catch (err) {
+            // 获取失败时使用当前时间
+            console.warn(
+              `获取用户 ${username} 登录统计失败，使用当前时间作为 createdAt:`,
+              err,
+            );
+          }
+
+          return {
+            username,
+            role:
+              username === ownerUser ? ('owner' as const) : ('user' as const),
+            banned: false,
+            createdAt,
+          };
+        }
+      }),
+    );
 
     // 更新用户列表
     adminConfig.UserConfig.Users = updatedUsers;
@@ -373,53 +408,69 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
   if (!adminConfig.SourceConfig || !Array.isArray(adminConfig.SourceConfig)) {
     adminConfig.SourceConfig = [];
   }
-  if (!adminConfig.CustomCategories || !Array.isArray(adminConfig.CustomCategories)) {
+  if (
+    !adminConfig.CustomCategories ||
+    !Array.isArray(adminConfig.CustomCategories)
+  ) {
     adminConfig.CustomCategories = [];
   }
   if (!adminConfig.LiveConfig || !Array.isArray(adminConfig.LiveConfig)) {
     adminConfig.LiveConfig = [];
   }
-  
+
   // 确保网盘搜索配置有默认值
   if (!adminConfig.NetDiskConfig) {
     adminConfig.NetDiskConfig = {
-      enabled: true,                                    // 默认启用
-      pansouUrl: 'https://so.252035.xyz',               // 默认公益服务
-      timeout: 30,                                      // 默认30秒超时
-      enabledCloudTypes: ['baidu', 'aliyun', 'quark'] // 默认只启用百度、阿里、夸克三大主流网盘
+      enabled: true, // 默认启用
+      pansouUrl: 'https://so.252035.xyz', // 默认公益服务
+      timeout: 30, // 默认30秒超时
+      enabledCloudTypes: ['baidu', 'aliyun', 'quark'], // 默认只启用百度、阿里、夸克三大主流网盘
     };
   }
 
   // 确保AI推荐配置有默认值
   if (!adminConfig.AIRecommendConfig) {
     adminConfig.AIRecommendConfig = {
-      enabled: false,                                   // 默认关闭
-      apiUrl: 'https://api.openai.com/v1',             // 默认OpenAI API
-      apiKey: '',                                       // 默认为空，需要管理员配置
-      model: 'gpt-3.5-turbo',                          // 默认模型
-      temperature: 0.7,                                // 默认温度
-      maxTokens: 3000                                  // 默认最大token数
+      enabled: false, // 默认关闭
+      apiUrl: 'https://api.openai.com/v1', // 默认OpenAI API
+      apiKey: '', // 默认为空，需要管理员配置
+      model: 'gpt-3.5-turbo', // 默认模型
+      temperature: 0.7, // 默认温度
+      maxTokens: 3000, // 默认最大token数
     };
   }
 
   // 确保YouTube配置有默认值
   if (!adminConfig.YouTubeConfig) {
     adminConfig.YouTubeConfig = {
-      enabled: false,                                   // 默认关闭
-      apiKey: '',                                       // 默认为空，需要管理员配置
-      enableDemo: true,                                 // 默认启用演示模式
-      maxResults: 25,                                   // 默认每页25个结果
+      enabled: false, // 默认关闭
+      apiKey: '', // 默认为空，需要管理员配置
+      enableDemo: true, // 默认启用演示模式
+      maxResults: 25, // 默认每页25个结果
       enabledRegions: ['US', 'CN', 'JP', 'KR', 'GB', 'DE', 'FR'], // 默认启用的地区
-      enabledCategories: ['Film & Animation', 'Music', 'Gaming', 'News & Politics', 'Entertainment'] // 默认启用的分类
+      enabledCategories: [
+        'Film & Animation',
+        'Music',
+        'Gaming',
+        'News & Politics',
+        'Entertainment',
+      ], // 默认启用的分类
     };
   }
 
   // 确保短剧配置有默认值
   if (!adminConfig.ShortDramaConfig) {
     adminConfig.ShortDramaConfig = {
-      primaryApiUrl: 'https://api.r2afosne.dpdns.org',  // 默认主API
-      alternativeApiUrl: '',                            // 默认为空，需要管理员配置
-      enableAlternative: false,                         // 默认关闭备用API
+      primaryApiUrl: 'https://api.r2afosne.dpdns.org', // 默认主API
+      alternativeApiUrl: '', // 默认为空，需要管理员配置
+      enableAlternative: false, // 默认关闭备用API
+    };
+  }
+
+  // 确保本地下载配置有默认值
+  if (!adminConfig.DownloadConfig) {
+    adminConfig.DownloadConfig = {
+      enabled: true, // 默认启用下载功能
     };
   }
 
@@ -436,8 +487,12 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     return true;
   });
   // 过滤站长
-  const originOwnerCfg = adminConfig.UserConfig.Users.find((u) => u.username === ownerUser);
-  adminConfig.UserConfig.Users = adminConfig.UserConfig.Users.filter((user) => user.username !== ownerUser);
+  const originOwnerCfg = adminConfig.UserConfig.Users.find(
+    (u) => u.username === ownerUser,
+  );
+  adminConfig.UserConfig.Users = adminConfig.UserConfig.Users.filter(
+    (user) => user.username !== ownerUser,
+  );
   // 其他用户不得拥有 owner 权限
   adminConfig.UserConfig.Users.forEach((user) => {
     if (user.role === 'owner') {
@@ -462,10 +517,16 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
     if (user.downloadLimitEnabled === undefined) {
       user.downloadLimitEnabled = true;
     }
-    if (typeof user.downloadLimitPerDay !== 'number' || Number.isNaN(user.downloadLimitPerDay)) {
+    if (
+      typeof user.downloadLimitPerDay !== 'number' ||
+      Number.isNaN(user.downloadLimitPerDay)
+    ) {
       user.downloadLimitPerDay = 3;
     } else {
-      user.downloadLimitPerDay = Math.max(0, Math.floor(user.downloadLimitPerDay));
+      user.downloadLimitPerDay = Math.max(
+        0,
+        Math.floor(user.downloadLimitPerDay),
+      );
     }
   });
 
@@ -481,13 +542,15 @@ export async function configSelfCheck(adminConfig: AdminConfig): Promise<AdminCo
 
   // 自定义分类去重
   const seenCustomCategoryKeys = new Set<string>();
-  adminConfig.CustomCategories = adminConfig.CustomCategories.filter((category) => {
-    if (seenCustomCategoryKeys.has(category.query + category.type)) {
-      return false;
-    }
-    seenCustomCategoryKeys.add(category.query + category.type);
-    return true;
-  });
+  adminConfig.CustomCategories = adminConfig.CustomCategories.filter(
+    (category) => {
+      if (seenCustomCategoryKeys.has(category.query + category.type)) {
+        return false;
+      }
+      seenCustomCategoryKeys.add(category.query + category.type);
+      return true;
+    },
+  );
 
   // 直播源去重
   const seenLiveKeys = new Set<string>();
@@ -512,7 +575,10 @@ export async function resetConfig() {
   if (!originConfig) {
     originConfig = {} as AdminConfig;
   }
-  const adminConfig = await getInitConfig(originConfig.ConfigFile, originConfig.ConfigSubscribtion);
+  const adminConfig = await getInitConfig(
+    originConfig.ConfigFile,
+    originConfig.ConfigSubscribtion,
+  );
   cachedConfig = adminConfig;
   await db.saveAdminConfig(adminConfig);
 
@@ -539,18 +605,26 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
         showAdultContent = userConfig.showAdultContent;
       }
       // 如果用户没有设置，检查用户组设置
-      else if (userConfig.tags && userConfig.tags.length > 0 && config.UserConfig.Tags) {
+      else if (
+        userConfig.tags &&
+        userConfig.tags.length > 0 &&
+        config.UserConfig.Tags
+      ) {
         // 如果用户有多个用户组，只要有一个用户组允许就允许（取并集）
-        const hasAnyTagAllowAdult = userConfig.tags.some(tagName => {
-          const tagConfig = config.UserConfig.Tags?.find(t => t.name === tagName);
+        const hasAnyTagAllowAdult = userConfig.tags.some((tagName) => {
+          const tagConfig = config.UserConfig.Tags?.find(
+            (t) => t.name === tagName,
+          );
           return tagConfig?.showAdultContent === true;
         });
         if (hasAnyTagAllowAdult) {
           showAdultContent = true;
         } else {
           // 检查是否有任何用户组明确禁止
-          const hasAnyTagDenyAdult = userConfig.tags.some(tagName => {
-            const tagConfig = config.UserConfig.Tags?.find(t => t.name === tagName);
+          const hasAnyTagDenyAdult = userConfig.tags.some((tagName) => {
+            const tagConfig = config.UserConfig.Tags?.find(
+              (t) => t.name === tagName,
+            );
             return tagConfig?.showAdultContent === false;
           });
           if (hasAnyTagDenyAdult) {
@@ -580,12 +654,14 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
   // 优先根据用户自己的 enabledApis 配置查找
   if (userConfig.enabledApis && userConfig.enabledApis.length > 0) {
     const userApiSitesSet = new Set(userConfig.enabledApis);
-    return allApiSites.filter((s) => userApiSitesSet.has(s.key)).map((s) => ({
-      key: s.key,
-      name: s.name,
-      api: s.api,
-      detail: s.detail,
-    }));
+    return allApiSites
+      .filter((s) => userApiSitesSet.has(s.key))
+      .map((s) => ({
+        key: s.key,
+        name: s.name,
+        api: s.api,
+        detail: s.detail,
+      }));
   }
 
   // 如果没有 enabledApis 配置，则根据 tags 查找
@@ -593,20 +669,24 @@ export async function getAvailableApiSites(user?: string): Promise<ApiSite[]> {
     const enabledApisFromTags = new Set<string>();
 
     // 遍历用户的所有 tags，收集对应的 enabledApis
-    userConfig.tags.forEach(tagName => {
-      const tagConfig = config.UserConfig.Tags?.find(t => t.name === tagName);
+    userConfig.tags.forEach((tagName) => {
+      const tagConfig = config.UserConfig.Tags?.find((t) => t.name === tagName);
       if (tagConfig && tagConfig.enabledApis) {
-        tagConfig.enabledApis.forEach(apiKey => enabledApisFromTags.add(apiKey));
+        tagConfig.enabledApis.forEach((apiKey) =>
+          enabledApisFromTags.add(apiKey),
+        );
       }
     });
 
     if (enabledApisFromTags.size > 0) {
-      return allApiSites.filter((s) => enabledApisFromTags.has(s.key)).map((s) => ({
-        key: s.key,
-        name: s.name,
-        api: s.api,
-        detail: s.detail,
-      }));
+      return allApiSites
+        .filter((s) => enabledApisFromTags.has(s.key))
+        .map((s) => ({
+          key: s.key,
+          name: s.name,
+          api: s.api,
+          detail: s.detail,
+        }));
     }
   }
 
@@ -622,7 +702,7 @@ export async function setCachedConfig(config: AdminConfig) {
 export async function hasSpecialFeaturePermission(
   username: string,
   feature: 'ai-recommend' | 'youtube-search',
-  providedConfig?: AdminConfig
+  providedConfig?: AdminConfig,
 ): Promise<boolean> {
   try {
     // 站长默认拥有所有权限
@@ -631,8 +711,10 @@ export async function hasSpecialFeaturePermission(
     }
 
     // 使用提供的配置或获取新配置
-    const config = providedConfig || await getConfig();
-    const userConfig = config.UserConfig.Users.find((u) => u.username === username);
+    const config = providedConfig || (await getConfig());
+    const userConfig = config.UserConfig.Users.find(
+      (u) => u.username === username,
+    );
 
     // 如果用户不在配置中，检查是否是新注册用户
     if (!userConfig) {
@@ -653,10 +735,20 @@ export async function hasSpecialFeaturePermission(
     }
 
     // 如果没有直接配置，检查用户组 tags 的权限
-    if (userConfig.tags && userConfig.tags.length > 0 && config.UserConfig.Tags) {
+    if (
+      userConfig.tags &&
+      userConfig.tags.length > 0 &&
+      config.UserConfig.Tags
+    ) {
       for (const tagName of userConfig.tags) {
-        const tagConfig = config.UserConfig.Tags.find(t => t.name === tagName);
-        if (tagConfig && tagConfig.enabledApis && tagConfig.enabledApis.includes(feature)) {
+        const tagConfig = config.UserConfig.Tags.find(
+          (t) => t.name === tagName,
+        );
+        if (
+          tagConfig &&
+          tagConfig.enabledApis &&
+          tagConfig.enabledApis.includes(feature)
+        ) {
           return true;
         }
       }

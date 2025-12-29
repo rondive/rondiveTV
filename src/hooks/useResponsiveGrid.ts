@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, useCallback } from 'react';
+import { useCallback, useLayoutEffect, useState } from 'react';
 
 interface GridDimensions {
   columnCount: number;
@@ -8,7 +8,7 @@ interface GridDimensions {
 }
 
 export const useResponsiveGrid = (
-  containerRef?: React.RefObject<HTMLElement>
+  containerRef?: React.RefObject<HTMLElement>,
 ): GridDimensions => {
   const [dimensions, setDimensions] = useState<GridDimensions>({
     columnCount: 3,
@@ -17,61 +17,72 @@ export const useResponsiveGrid = (
     containerWidth: 450,
   });
 
-  const calculateDimensions = useCallback((width?: number) => {
-    let containerWidth: number;
-    
-    if (width !== undefined) {
-      // ResizeObserver提供的宽度
-      containerWidth = width;
-    } else if (containerRef?.current?.offsetWidth) {
-      // 容器已渲染，使用实际宽度
-      containerWidth = containerRef.current.offsetWidth;
-    } else if (typeof window !== 'undefined') {
-      // 容器未准备好，使用窗口宽度减去预估padding
-      containerWidth = window.innerWidth - 80;
-    } else {
-      // SSR或无窗口环境
-      containerWidth = 450;
-    }
+  const calculateDimensions = useCallback(
+    (width?: number) => {
+      let containerWidth: number;
 
-    let columnCount: number;
-    
-    // 响应式列数计算
-    if (containerWidth >= 1536) columnCount = 8;      // 2xl
-    else if (containerWidth >= 1280) columnCount = 7;  // xl  
-    else if (containerWidth >= 1024) columnCount = 6;  // lg
-    else if (containerWidth >= 768) columnCount = 5;   // md
-    else if (containerWidth >= 640) columnCount = 4;   // sm
-    else if (containerWidth >= 475) columnCount = 3;   // xs
-    else columnCount = 2;                             // mobile
-
-    // 计算项目尺寸
-    const gap = columnCount > 3 ? 32 : 8; // 大屏更大间距
-    const totalGapWidth = gap * (columnCount - 1);
-    const itemWidth = Math.floor((containerWidth - totalGapWidth) / columnCount);
-    
-    // 根据海报比例计算高度 (2:3) + 标题和来源信息高度
-    const posterHeight = Math.floor(itemWidth * 1.5);
-    const textHeight = 60; // 标题 + 来源信息
-    const itemHeight = posterHeight + textHeight;
-
-    setDimensions((prev) => {
-      if (
-        prev.columnCount === columnCount &&
-        prev.itemWidth === itemWidth &&
-        prev.itemHeight === itemHeight &&
-        prev.containerWidth === containerWidth
-      ) {
-        return prev;
+      if (width !== undefined) {
+        // ResizeObserver提供的宽度
+        containerWidth = width;
+      } else if (containerRef?.current?.offsetWidth) {
+        // 容器已渲染，使用实际宽度
+        containerWidth = containerRef.current.offsetWidth;
+      } else if (typeof window !== 'undefined') {
+        // 容器未准备好，使用窗口宽度减去预估padding
+        containerWidth = window.innerWidth - 80;
+      } else {
+        // SSR或无窗口环境
+        containerWidth = 450;
       }
-      return {
-        columnCount,
-        itemWidth,
-        itemHeight,
-        containerWidth,
-      };
-    });
-  }, [containerRef]);
+
+      let columnCount: number;
+
+      // 响应式列数计算
+      if (containerWidth >= 1536)
+        columnCount = 8; // 2xl
+      else if (containerWidth >= 1280)
+        columnCount = 7; // xl
+      else if (containerWidth >= 1024)
+        columnCount = 6; // lg
+      else if (containerWidth >= 768)
+        columnCount = 5; // md
+      else if (containerWidth >= 640)
+        columnCount = 4; // sm
+      else if (containerWidth >= 475)
+        columnCount = 3; // xs
+      else columnCount = 2; // mobile
+
+      // 计算项目尺寸
+      const gap = columnCount > 3 ? 32 : 8; // 大屏更大间距
+      const totalGapWidth = gap * (columnCount - 1);
+      const itemWidth = Math.floor(
+        (containerWidth - totalGapWidth) / columnCount,
+      );
+
+      // 根据海报比例计算高度 (2:3) + 标题和来源信息高度
+      const posterHeight = Math.floor(itemWidth * 1.5);
+      const textHeight = 60; // 标题 + 来源信息
+      const itemHeight = posterHeight + textHeight;
+
+      setDimensions((prev) => {
+        if (
+          prev.columnCount === columnCount &&
+          prev.itemWidth === itemWidth &&
+          prev.itemHeight === itemHeight &&
+          prev.containerWidth === containerWidth
+        ) {
+          return prev;
+        }
+        return {
+          columnCount,
+          itemWidth,
+          itemHeight,
+          containerWidth,
+        };
+      });
+    },
+    [containerRef],
+  );
 
   useLayoutEffect(() => {
     // 使用递归重试机制

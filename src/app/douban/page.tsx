@@ -20,7 +20,9 @@ import DoubanCustomSelector from '@/components/DoubanCustomSelector';
 import DoubanSelector from '@/components/DoubanSelector';
 import PageLayout from '@/components/PageLayout';
 import VideoCard from '@/components/VideoCard';
-import VirtualDoubanGrid, { VirtualDoubanGridRef } from '@/components/VirtualDoubanGrid';
+import VirtualDoubanGrid, {
+  VirtualDoubanGridRef,
+} from '@/components/VirtualDoubanGrid';
 
 function DoubanPageClient() {
   const searchParams = useSearchParams();
@@ -100,7 +102,7 @@ function DoubanPageClient() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('useDoubanVirtualization', JSON.stringify(newValue));
     }
-    
+
     // 切换虚拟化模式时，立即同步参数引用，避免一致性检查失败
     currentParamsRef.current = {
       type,
@@ -192,7 +194,7 @@ function DoubanPageClient() {
     if (type === 'custom' && customCategories.length > 0) {
       // 自定义分类模式：优先选择 movie，如果没有 movie 则选择 tv
       const types = Array.from(
-        new Set(customCategories.map((cat) => cat.type))
+        new Set(customCategories.map((cat) => cat.type)),
       );
       if (types.length > 0) {
         // 优先选择 movie，如果没有 movie 则选择 tv
@@ -206,7 +208,7 @@ function DoubanPageClient() {
 
         // 设置选中类型的第一个分类的 query 作为二级选择
         const firstCategory = customCategories.find(
-          (cat) => cat.type === selectedType
+          (cat) => cat.type === selectedType,
         );
         if (firstCategory) {
           setSecondarySelection(firstCategory.query);
@@ -254,7 +256,7 @@ function DoubanPageClient() {
   const skeletonData = Array.from({ length: 25 }, (_, index) => index);
 
   // 参数快照比较函数
-  const isSnapshotEqual = useCallback(
+  const _isSnapshotEqual = useCallback(
     (
       snapshot1: {
         type: string;
@@ -271,7 +273,7 @@ function DoubanPageClient() {
         multiLevelSelection: Record<string, string>;
         selectedWeekday: string;
         currentPage: number;
-      }
+      },
     ) => {
       return (
         snapshot1.type === snapshot2.type &&
@@ -280,10 +282,10 @@ function DoubanPageClient() {
         snapshot1.selectedWeekday === snapshot2.selectedWeekday &&
         snapshot1.currentPage === snapshot2.currentPage &&
         JSON.stringify(snapshot1.multiLevelSelection) ===
-        JSON.stringify(snapshot2.multiLevelSelection)
+          JSON.stringify(snapshot2.multiLevelSelection)
       );
     },
-    []
+    [],
   );
 
   // 生成API请求参数的辅助函数
@@ -309,7 +311,7 @@ function DoubanPageClient() {
         pageStart,
       };
     },
-    [type, primarySelection, secondarySelection]
+    [type, primarySelection, secondarySelection],
   );
 
   // 防抖的数据加载函数
@@ -338,7 +340,7 @@ function DoubanPageClient() {
         // 自定义分类模式：根据选中的一级和二级选项获取对应的分类
         const selectedCategory = customCategories.find(
           (cat) =>
-            cat.type === primarySelection && cat.query === secondarySelection
+            cat.type === primarySelection && cat.query === secondarySelection,
         );
 
         if (selectedCategory) {
@@ -354,7 +356,7 @@ function DoubanPageClient() {
       } else if (type === 'anime' && primarySelection === '每日放送') {
         const calendarData = await GetBangumiCalendarData();
         const weekdayData = calendarData.find(
-          (item) => item.weekday.en === selectedWeekday
+          (item) => item.weekday.en === selectedWeekday,
         );
         if (weekdayData) {
           data = {
@@ -424,13 +426,15 @@ function DoubanPageClient() {
       if (data.code === 200) {
         // 更宽松的参数检查：只检查关键参数，忽略currentPage的差异
         const currentSnapshot = { ...currentParamsRef.current };
-        const keyParamsMatch = (
+        const keyParamsMatch =
           requestSnapshot.type === currentSnapshot.type &&
-          requestSnapshot.primarySelection === currentSnapshot.primarySelection &&
-          requestSnapshot.secondarySelection === currentSnapshot.secondarySelection &&
+          requestSnapshot.primarySelection ===
+            currentSnapshot.primarySelection &&
+          requestSnapshot.secondarySelection ===
+            currentSnapshot.secondarySelection &&
           requestSnapshot.selectedWeekday === currentSnapshot.selectedWeekday &&
-          JSON.stringify(requestSnapshot.multiLevelSelection) === JSON.stringify(currentSnapshot.multiLevelSelection)
-        );
+          JSON.stringify(requestSnapshot.multiLevelSelection) ===
+            JSON.stringify(currentSnapshot.multiLevelSelection);
 
         if (keyParamsMatch) {
           setDoubanData(data.list);
@@ -516,7 +520,7 @@ function DoubanPageClient() {
             const selectedCategory = customCategories.find(
               (cat) =>
                 cat.type === primarySelection &&
-                cat.query === secondarySelection
+                cat.query === secondarySelection,
             );
 
             if (selectedCategory) {
@@ -586,20 +590,23 @@ function DoubanPageClient() {
             });
           } else {
             data = await getDoubanCategories(
-              getRequestParams(currentPage * 25)
+              getRequestParams(currentPage * 25),
             );
           }
 
           if (data.code === 200) {
             // 更宽松的参数检查：只检查关键参数，忽略currentPage的差异
             const currentSnapshot = { ...currentParamsRef.current };
-            const keyParamsMatch = (
+            const keyParamsMatch =
               requestSnapshot.type === currentSnapshot.type &&
-              requestSnapshot.primarySelection === currentSnapshot.primarySelection &&
-              requestSnapshot.secondarySelection === currentSnapshot.secondarySelection &&
-              requestSnapshot.selectedWeekday === currentSnapshot.selectedWeekday &&
-              JSON.stringify(requestSnapshot.multiLevelSelection) === JSON.stringify(currentSnapshot.multiLevelSelection)
-            );
+              requestSnapshot.primarySelection ===
+                currentSnapshot.primarySelection &&
+              requestSnapshot.secondarySelection ===
+                currentSnapshot.secondarySelection &&
+              requestSnapshot.selectedWeekday ===
+                currentSnapshot.selectedWeekday &&
+              JSON.stringify(requestSnapshot.multiLevelSelection) ===
+                JSON.stringify(currentSnapshot.multiLevelSelection);
 
             if (keyParamsMatch) {
               setDoubanData((prev) => [...prev, ...data.list]);
@@ -652,7 +659,7 @@ function DoubanPageClient() {
           setCurrentPage((prev) => prev + 1);
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     observer.observe(loadingRef.current);
@@ -690,7 +697,7 @@ function DoubanPageClient() {
         // 如果是自定义分类模式，同时更新一级和二级选择器
         if (type === 'custom' && customCategories.length > 0) {
           const firstCategory = customCategories.find(
-            (cat) => cat.type === value
+            (cat) => cat.type === value,
           );
           if (firstCategory) {
             // 批量更新状态，避免多次触发数据加载
@@ -714,7 +721,7 @@ function DoubanPageClient() {
         }
       }
     },
-    [primarySelection, type, customCategories]
+    [primarySelection, type, customCategories],
   );
 
   const handleSecondaryChange = useCallback(
@@ -730,7 +737,7 @@ function DoubanPageClient() {
         setSecondarySelection(value);
       }
     },
-    [secondarySelection]
+    [secondarySelection],
   );
 
   const handleMultiLevelChange = useCallback(
@@ -738,7 +745,7 @@ function DoubanPageClient() {
       // 比较两个对象是否相同，忽略顺序
       const isEqual = (
         obj1: Record<string, string>,
-        obj2: Record<string, string>
+        obj2: Record<string, string>,
       ) => {
         const keys1 = Object.keys(obj1).sort();
         const keys2 = Object.keys(obj2).sort();
@@ -761,7 +768,7 @@ function DoubanPageClient() {
       setIsLoadingMore(false);
       setMultiLevelValues(values);
     },
-    [multiLevelValues]
+    [multiLevelValues],
   );
 
   const handleWeekdayChange = useCallback((weekday: string) => {
@@ -771,7 +778,7 @@ function DoubanPageClient() {
   // 处理虚拟化组件的加载更多请求
   const handleVirtualLoadMore = useCallback(() => {
     if (hasMore && !isLoadingMore) {
-      setCurrentPage(prev => prev + 1);
+      setCurrentPage((prev) => prev + 1);
     }
   }, [hasMore, isLoadingMore]);
 
@@ -922,30 +929,42 @@ function DoubanPageClient() {
               <div className='justify-start grid grid-cols-3 gap-x-2 gap-y-12 px-0 sm:px-2 sm:grid-cols-[repeat(auto-fill,minmax(160px,1fr))] sm:gap-x-8 sm:gap-y-20'>
                 {loading || !selectorsReady
                   ? // 显示骨架屏
-                  skeletonData.map((index) => <DoubanCardSkeleton key={index} />)
+                    skeletonData.map((index) => (
+                      <DoubanCardSkeleton key={index} />
+                    ))
                   : // 显示实际数据
-                  doubanData.map((item, index) => {
-                    const mappedType = type === 'movie' ? 'movie' : type === 'show' ? 'variety' : type === 'tv' ? 'tv' : type === 'anime' ? 'anime' : '';
-                    return (
-                      <div key={`${item.title}-${index}`} className='w-full'>
-                        <VideoCard
-                          from='douban'
-                          source='douban'
-                          id={item.id}
-                          source_name='豆瓣'
-                          title={item.title}
-                          poster={item.poster}
-                          douban_id={Number(item.id)}
-                          rate={item.rate}
-                          year={item.year}
-                          type={mappedType}
-                          isBangumi={
-                            type === 'anime' && primarySelection === '每日放送'
-                          }
-                        />
-                      </div>
-                    );
-                  })}
+                    doubanData.map((item, index) => {
+                      const mappedType =
+                        type === 'movie'
+                          ? 'movie'
+                          : type === 'show'
+                            ? 'variety'
+                            : type === 'tv'
+                              ? 'tv'
+                              : type === 'anime'
+                                ? 'anime'
+                                : '';
+                      return (
+                        <div key={`${item.title}-${index}`} className='w-full'>
+                          <VideoCard
+                            from='douban'
+                            source='douban'
+                            id={item.id}
+                            source_name='豆瓣'
+                            title={item.title}
+                            poster={item.poster}
+                            douban_id={Number(item.id)}
+                            rate={item.rate}
+                            year={item.year}
+                            type={mappedType}
+                            isBangumi={
+                              type === 'anime' &&
+                              primarySelection === '每日放送'
+                            }
+                          />
+                        </div>
+                      );
+                    })}
               </div>
 
               {/* 加载更多指示器 */}
@@ -975,11 +994,28 @@ function DoubanPageClient() {
 
                         {/* 文字和点动画 */}
                         <div className='flex items-center gap-1'>
-                          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>加载中</span>
+                          <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
+                            加载中
+                          </span>
                           <span className='flex gap-0.5'>
-                            <span className='animate-bounce' style={{ animationDelay: '0ms' }}>.</span>
-                            <span className='animate-bounce' style={{ animationDelay: '150ms' }}>.</span>
-                            <span className='animate-bounce' style={{ animationDelay: '300ms' }}>.</span>
+                            <span
+                              className='animate-bounce'
+                              style={{ animationDelay: '0ms' }}
+                            >
+                              .
+                            </span>
+                            <span
+                              className='animate-bounce'
+                              style={{ animationDelay: '150ms' }}
+                            >
+                              .
+                            </span>
+                            <span
+                              className='animate-bounce'
+                              style={{ animationDelay: '300ms' }}
+                            >
+                              .
+                            </span>
                           </span>
                         </div>
                       </div>
@@ -1000,8 +1036,18 @@ function DoubanPageClient() {
                       {/* 完成图标 */}
                       <div className='relative'>
                         <div className='w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center shadow-lg'>
-                          <svg className='w-7 h-7 text-white' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='2.5' d='M5 13l4 4L19 7'></path>
+                          <svg
+                            className='w-7 h-7 text-white'
+                            fill='none'
+                            stroke='currentColor'
+                            viewBox='0 0 24 24'
+                          >
+                            <path
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              strokeWidth='2.5'
+                              d='M5 13l4 4L19 7'
+                            ></path>
                           </svg>
                         </div>
                         {/* 光圈效果 */}
@@ -1035,8 +1081,18 @@ function DoubanPageClient() {
                       {/* 插图图标 */}
                       <div className='relative'>
                         <div className='w-24 h-24 rounded-full bg-gradient-to-br from-gray-100 to-slate-200 dark:from-gray-700 dark:to-slate-700 flex items-center justify-center shadow-lg'>
-                          <svg className='w-12 h-12 text-gray-400 dark:text-gray-500' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
-                            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth='1.5' d='M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'></path>
+                          <svg
+                            className='w-12 h-12 text-gray-400 dark:text-gray-500'
+                            fill='none'
+                            stroke='currentColor'
+                            viewBox='0 0 24 24'
+                          >
+                            <path
+                              strokeLinecap='round'
+                              strokeLinejoin='round'
+                              strokeWidth='1.5'
+                              d='M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4'
+                            ></path>
                           </svg>
                         </div>
                         {/* 浮动小点装饰 */}
@@ -1068,10 +1124,11 @@ function DoubanPageClient() {
       {/* 返回顶部悬浮按钮 */}
       <button
         onClick={scrollToTop}
-        className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${showBackToTop
-          ? 'opacity-100 translate-y-0 pointer-events-auto'
-          : 'opacity-0 translate-y-4 pointer-events-none'
-          }`}
+        className={`fixed bottom-20 md:bottom-6 right-6 z-[500] w-12 h-12 bg-green-500/90 hover:bg-green-500 text-white rounded-full shadow-lg backdrop-blur-sm transition-all duration-300 ease-in-out flex items-center justify-center group ${
+          showBackToTop
+            ? 'opacity-100 translate-y-0 pointer-events-auto'
+            : 'opacity-0 translate-y-4 pointer-events-none'
+        }`}
         aria-label='返回顶部'
       >
         <ChevronUp className='w-6 h-6 transition-transform group-hover:scale-110' />

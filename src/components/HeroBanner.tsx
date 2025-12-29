@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Info, Play } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+
 import { processImageUrl } from '@/lib/utils';
 
 interface BannerItem {
@@ -114,8 +115,6 @@ export default function HeroBanner({
   }
 
   const currentItem = items[currentIndex];
-  const imageUrl = currentItem.backdrop || currentItem.poster;
-
   return (
     <div
       className='relative w-full h-[420px] sm:h-[460px] md:h-[360px] overflow-hidden rounded-2xl group'
@@ -149,9 +148,13 @@ export default function HeroBanner({
               }`}
             >
               {/* 噪点纹理 */}
-              <div className='absolute inset-0 opacity-10' style={{
-                backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=\'0 0 200 200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cfilter id=\'noise\'%3E%3CfeTurbulence type=\'fractalNoise\' baseFrequency=\'0.9\' numOctaves=\'4\' /%3E%3C/filter%3E%3Crect width=\'100%25\' height=\'100%25\' filter=\'url(%23noise)\' /%3E%3C/svg%3E")',
-              }}></div>
+              <div
+                className='absolute inset-0 opacity-10'
+                style={{
+                  backgroundImage:
+                    "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' /%3E%3C/svg%3E\")",
+                }}
+              ></div>
             </div>
           );
         })}
@@ -165,7 +168,9 @@ export default function HeroBanner({
             <div
               key={item.id}
               className={`transition-opacity duration-500 ease-in-out ${
-                index === currentIndex ? 'opacity-100' : 'opacity-0 absolute inset-0'
+                index === currentIndex
+                  ? 'opacity-100'
+                  : 'opacity-0 absolute inset-0'
               }`}
             >
               <Image
@@ -176,11 +181,12 @@ export default function HeroBanner({
                 className='w-40 sm:w-48 md:w-40 lg:w-48 h-auto rounded-xl shadow-2xl ring-4 ring-white/30'
                 priority={index === 0}
                 quality={70}
-                sizes="(max-width: 640px) 160px, (max-width: 768px) 192px, (max-width: 1024px) 160px, 192px"
+                sizes='(max-width: 640px) 160px, (max-width: 768px) 192px, (max-width: 1024px) 160px, 192px'
                 onError={(e) => {
                   const target = e.currentTarget as HTMLImageElement;
                   if (!item.poster?.includes('doubanio.com')) return;
-                  const fallbackStep = target.dataset.doubanFallback || 'server';
+                  const fallbackStep =
+                    target.dataset.doubanFallback || 'server';
                   if (fallbackStep === 'server') {
                     target.dataset.doubanFallback = 'tencent';
                     const tencentUrl = getTencentFallbackUrl(item.poster);
@@ -209,21 +215,31 @@ export default function HeroBanner({
           {/* 元数据 */}
           <div className='flex items-center justify-center md:justify-start gap-2 sm:gap-3 text-xs sm:text-sm flex-shrink-0 flex-wrap'>
             {currentItem.year && (
-              <span className='text-white/90 font-medium'>{currentItem.year}</span>
+              <span className='text-white/90 font-medium'>
+                {currentItem.year}
+              </span>
             )}
             {currentItem.rate && (
               <div className='flex items-center gap-1 px-2 py-1 bg-white/20 backdrop-blur-sm rounded'>
                 <span className='text-yellow-400'>★</span>
-                <span className='text-white font-semibold'>{currentItem.rate}</span>
+                <span className='text-white font-semibold'>
+                  {currentItem.rate}
+                </span>
               </div>
             )}
             {currentItem.type && (
               <span className='px-2 py-1 bg-white/20 backdrop-blur-sm rounded text-white/90'>
-                {currentItem.type === 'movie' ? '电影' :
-                 currentItem.type === 'tv' ? '剧集' :
-                 currentItem.type === 'variety' ? '综艺' :
-                 currentItem.type === 'shortdrama' ? '短剧' :
-                 currentItem.type === 'anime' ? '动漫' : '剧集'}
+                {currentItem.type === 'movie'
+                  ? '电影'
+                  : currentItem.type === 'tv'
+                    ? '剧集'
+                    : currentItem.type === 'variety'
+                      ? '综艺'
+                      : currentItem.type === 'shortdrama'
+                        ? '短剧'
+                        : currentItem.type === 'anime'
+                          ? '动漫'
+                          : '剧集'}
               </span>
             )}
           </div>
@@ -253,7 +269,9 @@ export default function HeroBanner({
                 currentItem.type === 'shortdrama'
                   ? '/shortdrama'
                   : `/douban?type=${
-                      currentItem.type === 'variety' ? 'show' : (currentItem.type || 'movie')
+                      currentItem.type === 'variety'
+                        ? 'show'
+                        : currentItem.type || 'movie'
                     }`
               }
               className='flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-white/20 backdrop-blur-sm text-white font-semibold rounded-xl hover:bg-white/30 transition-all transform hover:scale-105 active:scale-95 shadow-lg text-sm sm:text-base'

@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import {
+  attachJobController,
   buildDownloadJobKey,
   createJob,
   getJobByKey,
   isJobActive,
-  attachJobController,
   markJobCompleted,
   markJobFailed,
   updateJob,
@@ -31,7 +31,10 @@ type JobPayload = {
 async function runDownloadJob(jobId: string, payload: JobPayload) {
   const controller = new AbortController();
   attachJobController(jobId, controller);
-  await updateJob(jobId, { status: 'running', progress: { message: 'starting' } });
+  await updateJob(jobId, {
+    status: 'running',
+    progress: { message: 'starting' },
+  });
 
   try {
     const result = await executeDownloadCore({
@@ -49,7 +52,12 @@ async function runDownloadJob(jobId: string, payload: JobPayload) {
       },
     });
 
-    if (!result.outputPath || !result.filename || !result.tempDir || !result.sizeBytes) {
+    if (
+      !result.outputPath ||
+      !result.filename ||
+      !result.tempDir ||
+      !result.sizeBytes
+    ) {
       throw new Error('Download failed');
     }
 
@@ -94,7 +102,8 @@ export async function GET(request: NextRequest) {
   const existing = getJobByKey(key);
   if (
     existing &&
-    (isJobActive(existing) || (existing.status === 'completed' && existing.outputPath))
+    (isJobActive(existing) ||
+      (existing.status === 'completed' && existing.outputPath))
   ) {
     return NextResponse.json({
       ok: true,

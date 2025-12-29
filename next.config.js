@@ -1,6 +1,4 @@
 /** @type {import('next').NextConfig} */
-/* eslint-disable @typescript-eslint/no-var-requires */
-
 const runtimeCaching = require('next-pwa/cache');
 
 const customRuntimeCaching = [
@@ -64,20 +62,34 @@ const customRuntimeCaching = [
 
 const useStandalone =
   process.env.DOCKER_ENV === 'true' ||
-  process.env.NEXT_OUTPUT_STANDALONE === 'true';
+  process.env.NEXT_OUTPUT_STANDALONE === 'true' ||
+  process.env.VERCEL ||
+  process.env.DOCKER_BUILD;
 
 const nextConfig = {
   ...(useStandalone ? { output: 'standalone' } : {}),
-  eslint: {
-    dirs: ['src'],
+  reactStrictMode: false,
+
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === 'production'
+        ? { exclude: ['error', 'warn'] }
+        : false,
   },
 
-  reactStrictMode: false,
-  swcMinify: false,
-
   experimental: {
-    instrumentationHook: process.env.NODE_ENV === 'production',
     cpus: 1,
+  },
+
+  // Next.js 16 使用 Turbopack，配置 SVG 加载
+  turbopack: {
+    root: __dirname,
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
   },
 
   // Uncoment to add domain whitelist
@@ -98,7 +110,7 @@ const nextConfig = {
   webpack(config) {
     // Grab the existing rule that handles SVG imports
     const fileLoaderRule = config.module.rules.find((rule) =>
-      rule.test?.test?.('.svg')
+      rule.test?.test?.('.svg'),
     );
 
     config.module.rules.push(
@@ -118,7 +130,7 @@ const nextConfig = {
           dimensions: false,
           titleProp: true,
         },
-      }
+      },
     );
 
     // Modify the file loader rule to ignore *.svg, since we have it handled now.

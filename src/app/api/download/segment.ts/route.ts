@@ -21,7 +21,9 @@ function isPrivateHost(host: string): boolean {
   );
 }
 
-function isLikelyMediaBytes(buffer: Uint8Array): boolean {
+type SegmentChunk = Uint8Array<ArrayBuffer>;
+
+function isLikelyMediaBytes(buffer: SegmentChunk): boolean {
   if (!buffer || buffer.length === 0) return false;
   if (buffer[0] === 0x47) return true;
   if (buffer.length >= 8) {
@@ -29,7 +31,7 @@ function isLikelyMediaBytes(buffer: Uint8Array): boolean {
       buffer[4] || 0,
       buffer[5] || 0,
       buffer[6] || 0,
-      buffer[7] || 0
+      buffer[7] || 0,
     );
     if (
       signature === 'ftyp' ||
@@ -44,21 +46,19 @@ function isLikelyMediaBytes(buffer: Uint8Array): boolean {
   return false;
 }
 
-async function peekStream(
-  body: ReadableStream<Uint8Array> | null
-): Promise<{
-  peek: Uint8Array;
-  stream: ReadableStream<Uint8Array> | null;
+async function peekStream(body: ReadableStream<SegmentChunk> | null): Promise<{
+  peek: SegmentChunk;
+  stream: ReadableStream<SegmentChunk> | null;
 }> {
   if (!body) {
-    return { peek: new Uint8Array(), stream: null };
+    return { peek: new Uint8Array(new ArrayBuffer(0)), stream: null };
   }
   const reader = body.getReader();
   const first = await reader.read();
-  const peek = first.value || new Uint8Array();
+  const peek = first.value || new Uint8Array(new ArrayBuffer(0));
 
   if (first.done) {
-    const stream = new ReadableStream<Uint8Array>({
+    const stream = new ReadableStream<SegmentChunk>({
       start(controller) {
         if (peek.length > 0) controller.enqueue(peek);
         controller.close();
@@ -67,7 +67,7 @@ async function peekStream(
     return { peek, stream };
   }
 
-  const stream = new ReadableStream<Uint8Array>({
+  const stream = new ReadableStream<SegmentChunk>({
     start(controller) {
       if (peek.length > 0) controller.enqueue(peek);
       const pump = () => {
@@ -123,7 +123,9 @@ export async function GET(request: NextRequest) {
         })
       : null;
   const storedReferer =
-    tokenData && typeof tokenData.referer === 'string' ? tokenData.referer : null;
+    tokenData && typeof tokenData.referer === 'string'
+      ? tokenData.referer
+      : null;
   const storedUserAgent =
     tokenData && typeof tokenData.userAgent === 'string'
       ? tokenData.userAgent
@@ -157,16 +159,25 @@ export async function GET(request: NextRequest) {
   }
 
   if (!['http:', 'https:'].includes(targetUrl.protocol)) {
-    return NextResponse.json({ error: 'Unsupported protocol' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Unsupported protocol' },
+      { status: 400 },
+    );
   }
 
   const requestHost = request.headers.get('host')?.split(':')[0]?.toLowerCase();
-  if (isPrivateHost(targetUrl.hostname) && targetUrl.hostname.toLowerCase() !== requestHost) {
+  if (
+    isPrivateHost(targetUrl.hostname) &&
+    targetUrl.hostname.toLowerCase() !== requestHost
+  ) {
     return NextResponse.json({ error: 'Blocked host' }, { status: 403 });
   }
 
   const pathLower = targetUrl.pathname.toLowerCase();
-  if (!allowImageSegments && /\.(jpg|jpeg|png|gif|webp|bmp|svg|ico)$/.test(pathLower)) {
+  if (
+    !allowImageSegments &&
+    /\.(jpg|jpeg|png|gif|webp|bmp|svg|ico)$/.test(pathLower)
+  ) {
     return new NextResponse('Unsupported segment type', {
       status: 422,
       headers: { 'Content-Type': 'text/plain' },
@@ -207,7 +218,7 @@ export async function GET(request: NextRequest) {
       {
         status: response.status >= 500 ? 502 : response.status,
         headers: { 'Content-Type': 'text/plain' },
-      }
+      },
     );
   }
 
@@ -228,7 +239,7 @@ export async function GET(request: NextRequest) {
       {
         status: 502,
         headers: { 'Content-Type': 'text/plain' },
-      }
+      },
     );
   }
   if (lowerType.startsWith('image/')) {
@@ -243,7 +254,7 @@ export async function GET(request: NextRequest) {
         {
           status: 502,
           headers: { 'Content-Type': 'text/plain' },
-        }
+        },
       );
     }
     if (!allowEncryptedImageSegments) {
@@ -259,7 +270,7 @@ export async function GET(request: NextRequest) {
           {
             status: 502,
             headers: { 'Content-Type': 'text/plain' },
-          }
+          },
         );
       }
       body = peeked.stream;

@@ -9,12 +9,11 @@ import {
   clearAllPlayRecords,
   getAllPlayRecords,
   subscribeToDataUpdates,
-  forceRefreshPlayRecordsCache,
 } from '@/lib/db.client';
 import {
+  checkWatchingUpdates,
   getDetailedWatchingUpdates,
   subscribeToWatchingUpdatesEvent,
-  checkWatchingUpdates,
   type WatchingUpdate,
 } from '@/lib/watching-updates';
 
@@ -31,7 +30,9 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
     (PlayRecord & { key: string })[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const [watchingUpdates, setWatchingUpdates] = useState<WatchingUpdate | null>(null);
+  const [watchingUpdates, setWatchingUpdates] = useState<WatchingUpdate | null>(
+    null,
+  );
 
   // 处理播放记录数据更新的函数
   const updatePlayRecords = (allRecords: Record<string, PlayRecord>) => {
@@ -43,7 +44,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
 
     // 按 save_time 降序排序（最新的在前面）
     const sortedRecords = recordsArray.sort(
-      (a, b) => b.save_time - a.save_time
+      (a, b) => b.save_time - a.save_time,
     );
 
     setPlayRecords(sortedRecords);
@@ -72,7 +73,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
       'playRecordsUpdated',
       (newRecords: Record<string, PlayRecord>) => {
         updatePlayRecords(newRecords);
-      }
+      },
     );
 
     return unsubscribe;
@@ -120,7 +121,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
       (newRecords: Record<string, PlayRecord>) => {
         console.log('ContinueWatching: 收到播放记录更新事件，立即同步数据');
         updatePlayRecords(newRecords);
-      }
+      },
     );
 
     // 订阅watching updates事件
@@ -154,31 +155,36 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
   };
 
   // 检查播放记录是否有新集数更新
-  const getNewEpisodesCount = (record: PlayRecord & { key: string }): number => {
+  const getNewEpisodesCount = (
+    record: PlayRecord & { key: string },
+  ): number => {
     if (!watchingUpdates || !watchingUpdates.updatedSeries) return 0;
 
     const { source, id } = parseKey(record.key);
 
     // 在watchingUpdates中查找匹配的剧集
-    const matchedSeries = watchingUpdates.updatedSeries.find(series =>
-      series.sourceKey === source &&
-      series.videoId === id &&
-      series.hasNewEpisode
+    const matchedSeries = watchingUpdates.updatedSeries.find(
+      (series) =>
+        series.sourceKey === source &&
+        series.videoId === id &&
+        series.hasNewEpisode,
     );
 
-    return matchedSeries ? (matchedSeries.newEpisodes || 0) : 0;
+    return matchedSeries ? matchedSeries.newEpisodes || 0 : 0;
   };
 
   // 获取最新的总集数（用于显示，不修改原始数据）
-  const getLatestTotalEpisodes = (record: PlayRecord & { key: string }): number => {
-    if (!watchingUpdates || !watchingUpdates.updatedSeries) return record.total_episodes;
+  const getLatestTotalEpisodes = (
+    record: PlayRecord & { key: string },
+  ): number => {
+    if (!watchingUpdates || !watchingUpdates.updatedSeries)
+      return record.total_episodes;
 
     const { source, id } = parseKey(record.key);
 
     // 在watchingUpdates中查找匹配的剧集
-    const matchedSeries = watchingUpdates.updatedSeries.find(series =>
-      series.sourceKey === source &&
-      series.videoId === id
+    const matchedSeries = watchingUpdates.updatedSeries.find(
+      (series) => series.sourceKey === source && series.videoId === id,
     );
 
     // 如果找到匹配的剧集且有最新集数信息，返回最新集数；否则返回原始集数
@@ -190,7 +196,11 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
   return (
     <section className={`mb-8 ${className || ''}`}>
       <div className='mb-4 flex items-center justify-between'>
-        <SectionTitle title="继续观看" icon={Clock} iconColor="text-green-500" />
+        <SectionTitle
+          title='继续观看'
+          icon={Clock}
+          iconColor='text-green-500'
+        />
         {!loading && playRecords.length > 0 && (
           <button
             className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors'
@@ -243,7 +253,7 @@ export default function ContinueWatching({ className }: ContinueWatchingProps) {
                       from='playrecord'
                       onDelete={() =>
                         setPlayRecords((prev) =>
-                          prev.filter((r) => r.key !== record.key)
+                          prev.filter((r) => r.key !== record.key),
                         )
                       }
                       type={latestTotalEpisodes > 1 ? 'tv' : ''}

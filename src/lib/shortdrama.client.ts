@@ -1,23 +1,25 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-console */
 
 import {
+  getCache,
+  getCacheKey,
+  setCache,
+  SHORTDRAMA_CACHE_EXPIRE,
+} from './shortdrama-cache';
+import {
   ShortDramaCategory,
   ShortDramaItem,
   ShortDramaParseResult,
 } from './types';
-import {
-  SHORTDRAMA_CACHE_EXPIRE,
-  getCacheKey,
-  getCache,
-  setCache,
-} from './shortdrama-cache';
 
 const SHORTDRAMA_API_BASE = 'https://api.r2afosne.dpdns.org';
 
 // 检测是否为移动端环境
 const isMobile = () => {
   if (typeof window === 'undefined') return false;
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  );
 };
 
 // 获取API基础URL - 移动端使用内部API代理，桌面端直接调用外部API
@@ -47,14 +49,17 @@ export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
       : getApiBase('/categories');
 
     // 移动端使用内部API，桌面端调用外部API
-    const fetchOptions: RequestInit = isMobile() ? {
-      // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
-    } : {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    };
+    const fetchOptions: RequestInit = isMobile()
+      ? {
+          // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
+        }
+      : {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            Accept: 'application/json',
+          },
+        };
 
     const response = await fetch(apiUrl, fetchOptions);
 
@@ -88,7 +93,7 @@ export async function getShortDramaCategories(): Promise<ShortDramaCategory[]> {
 // 获取推荐短剧列表
 export async function getRecommendedShortDramas(
   category?: number,
-  size = 10
+  size = 10,
 ): Promise<ShortDramaItem[]> {
   const cacheKey = getCacheKey('recommends', { category, size });
 
@@ -105,14 +110,17 @@ export async function getRecommendedShortDramas(
       ? `/api/shortdrama/recommend?${category ? `category=${category}&` : ''}size=${size}`
       : `${SHORTDRAMA_API_BASE}/vod/recommend?${category ? `category=${category}&` : ''}size=${size}`;
 
-    const fetchOptions: RequestInit = isMobile() ? {
-      // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
-    } : {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    };
+    const fetchOptions: RequestInit = isMobile()
+      ? {
+          // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
+        }
+      : {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            Accept: 'application/json',
+          },
+        };
 
     const response = await fetch(apiUrl, fetchOptions);
 
@@ -132,12 +140,14 @@ export async function getRecommendedShortDramas(
         id: item.vod_id || item.id,
         name: item.vod_name || item.name,
         cover: item.vod_pic || item.cover,
-        update_time: item.vod_time || item.update_time || new Date().toISOString(),
+        update_time:
+          item.vod_time || item.update_time || new Date().toISOString(),
         score: item.vod_score || item.score || 0,
         episode_count: parseInt(item.vod_remarks?.replace(/[^\d]/g, '') || '1'),
         description: item.vod_content || item.description || '',
         author: item.vod_actor || item.author || '',
-        backdrop: item.vod_pic_slide || item.backdrop || item.vod_pic || item.cover,
+        backdrop:
+          item.vod_pic_slide || item.backdrop || item.vod_pic || item.cover,
         vote_average: item.vod_score || item.vote_average || 0,
         tmdb_id: item.tmdb_id || undefined,
       }));
@@ -156,7 +166,7 @@ export async function getRecommendedShortDramas(
 export async function getShortDramaList(
   category: number,
   page = 1,
-  size = 20
+  size = 20,
 ): Promise<{ list: ShortDramaItem[]; hasMore: boolean }> {
   const cacheKey = getCacheKey('lists', { category, page, size });
 
@@ -173,14 +183,17 @@ export async function getShortDramaList(
       ? `/api/shortdrama/list?categoryId=${category}&page=${page}&size=${size}`
       : `${SHORTDRAMA_API_BASE}/vod/list?categoryId=${category}&page=${page}&size=${size}`;
 
-    const fetchOptions: RequestInit = isMobile() ? {
-      // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
-    } : {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    };
+    const fetchOptions: RequestInit = isMobile()
+      ? {
+          // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
+        }
+      : {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            Accept: 'application/json',
+          },
+        };
 
     const response = await fetch(apiUrl, fetchOptions);
 
@@ -217,7 +230,10 @@ export async function getShortDramaList(
     }
 
     // 缓存结果 - 第一页缓存时间更长
-    const cacheTime = page === 1 ? SHORTDRAMA_CACHE_EXPIRE.lists * 2 : SHORTDRAMA_CACHE_EXPIRE.lists;
+    const cacheTime =
+      page === 1
+        ? SHORTDRAMA_CACHE_EXPIRE.lists * 2
+        : SHORTDRAMA_CACHE_EXPIRE.lists;
     await setCache(cacheKey, result, cacheTime);
     return result;
   } catch (error) {
@@ -230,21 +246,24 @@ export async function getShortDramaList(
 export async function searchShortDramas(
   query: string,
   page = 1,
-  size = 20
+  size = 20,
 ): Promise<{ list: ShortDramaItem[]; hasMore: boolean }> {
   try {
     const apiUrl = isMobile()
       ? `/api/shortdrama/search?query=${encodeURIComponent(query)}&page=${page}&size=${size}`
       : `${SHORTDRAMA_API_BASE}/vod/search?name=${encodeURIComponent(query)}&page=${page}&size=${size}`;
 
-    const fetchOptions: RequestInit = isMobile() ? {
-      // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
-    } : {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    };
+    const fetchOptions: RequestInit = isMobile()
+      ? {
+          // 移动端：让浏览器使用HTTP缓存，不添加破坏缓存的headers
+        }
+      : {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            Accept: 'application/json',
+          },
+        };
 
     const response = await fetch(apiUrl, fetchOptions);
 
@@ -291,7 +310,7 @@ export async function searchShortDramas(
 async function parseWithAlternativeApi(
   dramaName: string,
   episode: number,
-  alternativeApiUrl: string
+  alternativeApiUrl: string,
 ): Promise<ShortDramaParseResult> {
   try {
     const alternativeApiBase = alternativeApiUrl;
@@ -311,12 +330,16 @@ async function parseWithAlternativeApi(
 
     const searchResponse = await fetch(searchUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        Accept: 'application/json',
       },
     });
 
-    console.log('[Alternative API] Step 1 - Response status:', searchResponse.status);
+    console.log(
+      '[Alternative API] Step 1 - Response status:',
+      searchResponse.status,
+    );
 
     if (!searchResponse.ok) {
       const errorText = await searchResponse.text();
@@ -331,7 +354,11 @@ async function parseWithAlternativeApi(
       throw new Error('备用API返回数据格式错误');
     }
 
-    if (!searchData.data || !Array.isArray(searchData.data) || searchData.data.length === 0) {
+    if (
+      !searchData.data ||
+      !Array.isArray(searchData.data) ||
+      searchData.data.length === 0
+    ) {
       return {
         code: 1,
         msg: `未找到短剧"${dramaName}"`,
@@ -349,8 +376,9 @@ async function parseWithAlternativeApi(
     const episodesUrl = `${alternativeApiBase}/api/v1/drama/dramas?dramaId=${dramaId}`;
     const episodesResponse = await fetch(episodesUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        Accept: 'application/json',
       },
     });
 
@@ -360,9 +388,30 @@ async function parseWithAlternativeApi(
 
     const episodesData = await episodesResponse.json();
 
+    // 检查API是否返回错误消息（字符串格式）
+    if (typeof episodesData === 'string') {
+      if (episodesData.includes('未查询到该剧集')) {
+        return {
+          code: 1,
+          msg: `该短剧暂时无法播放，请稍后再试`,
+        };
+      }
+      return {
+        code: 1,
+        msg: `视频源暂时不可用`,
+      };
+    }
+
     // 验证集数数据
-    if (!episodesData || !episodesData.data || !Array.isArray(episodesData.data)) {
-      throw new Error('备用API返回的集数列表格式错误');
+    if (
+      !episodesData ||
+      !episodesData.data ||
+      !Array.isArray(episodesData.data)
+    ) {
+      return {
+        code: 1,
+        msg: '视频源暂时不可用',
+      };
     }
 
     if (episodesData.data.length === 0) {
@@ -390,31 +439,90 @@ async function parseWithAlternativeApi(
       };
     }
 
-    const targetEpisode = episodesData.data[episodeIndex];
-    if (!targetEpisode || !targetEpisode.id) {
-      throw new Error(`集数 ${episode} 的数据不完整`);
+    // Step 3: 尝试获取视频直链，如果当前集不存在则自动跳到下一集
+    // 最多尝试3集（防止无限循环）
+    let actualEpisodeIndex = episodeIndex;
+    let directData: any = null;
+    const maxRetries = 3;
+
+    for (let retry = 0; retry < maxRetries; retry++) {
+      const currentIndex = episodeIndex + retry;
+
+      // 检查是否超出集数范围
+      if (currentIndex >= episodesData.data.length) {
+        return {
+          code: 1,
+          msg: `该集暂时无法播放，请尝试其他集数`,
+        };
+      }
+
+      const targetEpisode = episodesData.data[currentIndex];
+      if (!targetEpisode || !targetEpisode.id) {
+        console.log(
+          `[Alternative API] 第${episode + retry}集数据不完整，尝试下一集`,
+        );
+        continue;
+      }
+
+      const episodeId = targetEpisode.id;
+      const directUrl = `${alternativeApiBase}/api/v1/drama/direct?episodeId=${episodeId}`;
+
+      try {
+        const directResponse = await fetch(directUrl, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            Accept: 'application/json',
+          },
+        });
+
+        if (!directResponse.ok) {
+          console.log(
+            `[Alternative API] 第${episode + retry}集HTTP错误: ${directResponse.status}，尝试下一集`,
+          );
+          continue;
+        }
+
+        const data = await directResponse.json();
+
+        // 检查是否返回 "未查询到该剧集" 错误
+        if (typeof data === 'string' && data.includes('未查询到该剧集')) {
+          console.log(
+            `[Alternative API] 第${episode + retry}集视频源缺失，尝试下一集`,
+          );
+          continue;
+        }
+
+        // 验证播放链接数据
+        if (!data || !data.url) {
+          console.log(
+            `[Alternative API] 第${episode + retry}集无播放链接，尝试下一集`,
+          );
+          continue;
+        }
+
+        // 成功获取到视频链接
+        directData = data;
+        actualEpisodeIndex = currentIndex;
+
+        if (retry > 0) {
+          console.log(
+            `[Alternative API] ✅ 第${episode}集不可用，已自动跳转到第${episode + retry}集`,
+          );
+        }
+        break;
+      } catch (error) {
+        console.log(`[Alternative API] 第${episode + retry}集请求失败:`, error);
+        continue;
+      }
     }
 
-    const episodeId = targetEpisode.id;
-
-    // Step 3: Get the direct link for the episode
-    const directUrl = `${alternativeApiBase}/api/v1/drama/direct?episodeId=${episodeId}`;
-    const directResponse = await fetch(directUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    });
-
-    if (!directResponse.ok) {
-      throw new Error(`Direct link fetch failed: ${directResponse.status}`);
-    }
-
-    const directData = await directResponse.json();
-
-    // 验证播放链接数据
+    // 如果所有尝试都失败
     if (!directData || !directData.url) {
-      throw new Error('备用API未返回播放链接');
+      return {
+        code: 1,
+        msg: `该集暂时无法播放，请尝试其他集数`,
+      };
     }
 
     // 将 http:// 转换为 https:// 避免 Mixed Content 错误
@@ -423,23 +531,26 @@ async function parseWithAlternativeApi(
     // 备用API的视频链接通过代理访问（避免防盗链限制）
     const proxyUrl = `/api/proxy/shortdrama?url=${encodeURIComponent(videoUrl)}`;
 
+    // 计算实际播放的集数（从1开始）
+    const actualEpisode = actualEpisodeIndex + 1;
+
     return {
       code: 0,
       data: {
         videoId: dramaId,
         videoName: firstDrama.name,
-        currentEpisode: episode,
+        currentEpisode: actualEpisode, // 使用实际播放的集数
         totalEpisodes: episodesData.data.length,
         parsedUrl: proxyUrl,
         proxyUrl: proxyUrl,
         cover: directData.pic || firstDrama.pic || '',
         description: firstDrama.overview || '',
         episode: {
-          index: episode,
-          label: `第${episode}集`,
+          index: actualEpisode, // 使用实际播放的集数
+          label: `第${actualEpisode}集`,
           parsedUrl: proxyUrl,
           proxyUrl: proxyUrl,
-          title: directData.title || `第${episode}集`,
+          title: directData.title || `第${actualEpisode}集`,
         },
       },
       // 额外的元数据供其他地方使用
@@ -448,15 +559,14 @@ async function parseWithAlternativeApi(
         backdrop: firstDrama.backdrop || firstDrama.pic || '',
         vote_average: firstDrama.vote_average || 0,
         tmdb_id: firstDrama.tmdb_id || undefined,
-      }
+      },
     };
   } catch (error) {
     console.error('备用API解析失败:', error);
     // 返回更详细的错误信息
-    const errorMsg = error instanceof Error ? error.message : '备用API请求失败';
     return {
       code: -1,
-      msg: `备用API错误: ${errorMsg}`,
+      msg: `视频源暂时不可用，请稍后再试`,
     };
   }
 }
@@ -467,13 +577,17 @@ export async function parseShortDramaEpisode(
   episode: number,
   useProxy = true,
   dramaName?: string,
-  alternativeApiUrl?: string
+  alternativeApiUrl?: string,
 ): Promise<ShortDramaParseResult> {
   // 如果提供了剧名和备用API，优先尝试备用API（因为主API链接经常失效）
   if (dramaName && alternativeApiUrl) {
     console.log('优先尝试备用API...');
     try {
-      const alternativeResult = await parseWithAlternativeApi(dramaName, episode, alternativeApiUrl);
+      const alternativeResult = await parseWithAlternativeApi(
+        dramaName,
+        episode,
+        alternativeApiUrl,
+      );
       if (alternativeResult.code === 0) {
         console.log('备用API成功！');
         return alternativeResult;
@@ -499,19 +613,22 @@ export async function parseShortDramaEpisode(
       ? `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`
       : `${SHORTDRAMA_API_BASE}/vod/parse/single?${params.toString()}`;
 
-    const fetchOptions: RequestInit = isMobile() ? {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    } : {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    };
+    const fetchOptions: RequestInit = isMobile()
+      ? {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0',
+          },
+        }
+      : {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            Accept: 'application/json',
+          },
+        };
 
     const response = await fetch(apiUrl, fetchOptions);
 
@@ -526,11 +643,15 @@ export async function parseShortDramaEpisode(
       // 如果主API失败且提供了剧名和备用API地址，尝试使用备用API
       if (dramaName && alternativeApiUrl) {
         console.log('主API失败，尝试使用备用API...');
-        return await parseWithAlternativeApi(dramaName, episode, alternativeApiUrl);
+        return await parseWithAlternativeApi(
+          dramaName,
+          episode,
+          alternativeApiUrl,
+        );
       }
       return {
         code: data.code,
-        msg: data.msg || '解析失败',
+        msg: data.msg || '该集暂时无法播放，请稍后再试',
       };
     }
 
@@ -540,7 +661,11 @@ export async function parseShortDramaEpisode(
     // 如果主API返回成功但没有有效链接，尝试备用API
     if (!parsedUrl && dramaName && alternativeApiUrl) {
       console.log('主API未返回有效链接，尝试使用备用API...');
-      return await parseWithAlternativeApi(dramaName, episode, alternativeApiUrl);
+      return await parseWithAlternativeApi(
+        dramaName,
+        episode,
+        alternativeApiUrl,
+      );
     }
 
     // API成功时直接返回数据对象，根据实际结构解析
@@ -563,11 +688,15 @@ export async function parseShortDramaEpisode(
     // 如果主API网络请求失败且提供了剧名和备用API地址，尝试使用备用API
     if (dramaName && alternativeApiUrl) {
       console.log('主API网络错误，尝试使用备用API...');
-      return await parseWithAlternativeApi(dramaName, episode, alternativeApiUrl);
+      return await parseWithAlternativeApi(
+        dramaName,
+        episode,
+        alternativeApiUrl,
+      );
     }
     return {
       code: -1,
-      msg: '网络请求失败',
+      msg: '网络连接失败，请检查网络后重试',
     };
   }
 }
@@ -576,7 +705,7 @@ export async function parseShortDramaEpisode(
 export async function parseShortDramaBatch(
   id: number,
   episodes: number[],
-  useProxy = true
+  useProxy = true,
 ): Promise<ShortDramaParseResult[]> {
   try {
     const params = new URLSearchParams({
@@ -593,19 +722,22 @@ export async function parseShortDramaBatch(
       ? `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`
       : `${SHORTDRAMA_API_BASE}/vod/parse/batch?${params.toString()}`;
 
-    const fetchOptions: RequestInit = isMobile() ? {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    } : {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    };
+    const fetchOptions: RequestInit = isMobile()
+      ? {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0',
+          },
+        }
+      : {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            Accept: 'application/json',
+          },
+        };
 
     const response = await fetch(apiUrl, fetchOptions);
 
@@ -624,7 +756,7 @@ export async function parseShortDramaBatch(
 // 解析整部短剧所有集数
 export async function parseShortDramaAll(
   id: number,
-  useProxy = true
+  useProxy = true,
 ): Promise<ShortDramaParseResult[]> {
   try {
     const params = new URLSearchParams({
@@ -640,19 +772,22 @@ export async function parseShortDramaAll(
       ? `/api/shortdrama/parse?${params.toString()}&_t=${timestamp}`
       : `${SHORTDRAMA_API_BASE}/vod/parse/all?${params.toString()}`;
 
-    const fetchOptions: RequestInit = isMobile() ? {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0'
-      }
-    } : {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'application/json',
-      },
-    };
+    const fetchOptions: RequestInit = isMobile()
+      ? {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0',
+          },
+        }
+      : {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            Accept: 'application/json',
+          },
+        };
 
     const response = await fetch(apiUrl, fetchOptions);
 

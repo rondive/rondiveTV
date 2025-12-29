@@ -1,8 +1,8 @@
 /* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getSpiderJar, getSpiderStatus } from '@/lib/spiderJar';
 import { detectNetworkEnvironment } from '@/lib/networkDetection';
+import { getSpiderJar, getSpiderStatus } from '@/lib/spiderJar';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 // 测试单个URL的可达性
 async function testUrlReachability(
   url: string,
-  timeoutMs = 8000
+  timeoutMs = 8000,
 ): Promise<{
   success: boolean;
   responseTime: number;
@@ -72,7 +72,7 @@ async function testUrlReachability(
 function generateRecommendations(
   networkEnv: any,
   spiderStatus: any,
-  testResults: any[]
+  testResults: any[],
 ): string[] {
   const recommendations: string[] = [];
 
@@ -83,24 +83,23 @@ function generateRecommendations(
     const successfulDomesticSources = testResults.filter(
       (r) =>
         r.success &&
-        (r.url.includes('iqiq.io') ||
-          r.url.includes('cors.isteed.cc'))
+        (r.url.includes('iqiq.io') || r.url.includes('cors.isteed.cc')),
     );
 
     if (successfulDomesticSources.length === 0) {
       recommendations.push(
-        '⚠️ 国内优化源不可用，建议检查网络连接或尝试使用代理'
+        '⚠️ 国内优化源不可用，建议检查网络连接或尝试使用代理',
       );
     } else {
       recommendations.push(
-        `✅ 找到 ${successfulDomesticSources.length} 个国内可用源，加载速度应该较快`
+        `✅ 找到 ${successfulDomesticSources.length} 个国内可用源，加载速度应该较快`,
       );
     }
   } else {
     recommendations.push('🌍 检测到国际网络环境，已启用GitHub直连');
 
     const successfulGitHubSources = testResults.filter(
-      (r) => r.success && r.url.includes('githubusercontent.com')
+      (r) => r.success && r.url.includes('githubusercontent.com'),
     );
 
     if (successfulGitHubSources.length === 0) {
@@ -111,11 +110,11 @@ function generateRecommendations(
   // 基于Spider状态的建议
   if (!spiderStatus?.success) {
     recommendations.push(
-      '🔧 当前使用备用JAR，功能可能受限，建议重试或联系管理员'
+      '🔧 当前使用备用JAR，功能可能受限，建议重试或联系管理员',
     );
   } else if (spiderStatus.tried > 3) {
     recommendations.push(
-      '📡 多个源尝试后才成功，建议检查网络稳定性或切换网络环境'
+      '📡 多个源尝试后才成功，建议检查网络稳定性或切换网络环境',
     );
   } else {
     recommendations.push('✅ Spider JAR加载正常，配置应该可以正常使用');
@@ -130,7 +129,7 @@ function generateRecommendations(
 
     if (avgResponseTime > 3000) {
       recommendations.push(
-        '🐌 网络响应较慢，建议选择延迟较低的网络或使用有线连接'
+        '🐌 网络响应较慢，建议选择延迟较低的网络或使用有线连接',
       );
     } else if (avgResponseTime < 1000) {
       recommendations.push('🚀 网络响应良好，配置加载应该很流畅');
@@ -172,13 +171,13 @@ export async function GET(request: NextRequest) {
       testSources.map(async (url) => ({
         url,
         ...(await testUrlReachability(url, 10000)),
-      }))
+      })),
     );
 
     const testResults = reachabilityTests
       .filter(
         (
-          result
+          result,
         ): result is PromiseFulfilledResult<{
           success: boolean;
           responseTime: number;
@@ -186,7 +185,7 @@ export async function GET(request: NextRequest) {
           error?: string;
           size?: number;
           url: string;
-        }> => result.status === 'fulfilled'
+        }> => result.status === 'fulfilled',
       )
       .map((result) => result.value);
 
@@ -194,13 +193,13 @@ export async function GET(request: NextRequest) {
     const recommendations = generateRecommendations(
       networkEnv,
       spiderStatus,
-      testResults
+      testResults,
     );
 
     // 计算总体健康分数
     const successfulTests = testResults.filter((r) => r.success).length;
     const healthScore = Math.round(
-      (successfulTests / testSources.length) * 100
+      (successfulTests / testSources.length) * 100,
     );
 
     const response = {
@@ -246,8 +245,8 @@ export async function GET(request: NextRequest) {
           healthScore >= 75
             ? 'excellent'
             : healthScore >= 50
-            ? 'good'
-            : 'needs_attention',
+              ? 'good'
+              : 'needs_attention',
         spider_available: freshSpider.success,
         network_stable: successfulTests >= 2,
         recommendations_count: recommendations.length,
@@ -263,7 +262,7 @@ export async function GET(request: NextRequest) {
         error: error.message || 'Health check failed',
         timestamp: Date.now(),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

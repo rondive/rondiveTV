@@ -7,10 +7,14 @@ import './globals.css';
 
 import { getConfig } from '@/lib/config';
 
+import { DownloadPanel } from '../components/download/DownloadPanel';
 import { GlobalErrorIndicator } from '../components/GlobalErrorIndicator';
 import { SessionTracker } from '../components/SessionTracker';
 import { SiteProvider } from '../components/SiteProvider';
 import { ThemeProvider } from '../components/ThemeProvider';
+import ChatFloatingWindow from '../components/watch-room/ChatFloatingWindow';
+import { WatchRoomProvider } from '../components/WatchRoomProvider';
+import { DownloadProvider } from '../contexts/DownloadContext';
 
 const inter = Inter({ subsets: ['latin'] });
 export const dynamic = 'force-dynamic';
@@ -71,7 +75,7 @@ export default async function RootLayout({
     doubanImageProxy = config.SiteConfig.DoubanImageProxy;
     disableYellowFilter = config.SiteConfig.DisableYellowFilter;
     customCategories = config.CustomCategories.filter(
-      (category) => !category.disabled
+      (category) => !category.disabled,
     ).map((category) => ({
       name: category.name || '',
       type: category.type,
@@ -117,11 +121,17 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SiteProvider siteName={siteName} announcement={announcement}>
-            <SessionTracker />
-            {children}
-            <GlobalErrorIndicator />
-          </SiteProvider>
+          <DownloadProvider>
+            <WatchRoomProvider>
+              <SiteProvider siteName={siteName} announcement={announcement}>
+                <SessionTracker />
+                {children}
+                <GlobalErrorIndicator />
+              </SiteProvider>
+              <DownloadPanel />
+              <ChatFloatingWindow />
+            </WatchRoomProvider>
+          </DownloadProvider>
         </ThemeProvider>
       </body>
     </html>

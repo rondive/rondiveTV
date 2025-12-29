@@ -2,8 +2,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getAvailableApiSites } from '@/lib/config';
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { getAvailableApiSites } from '@/lib/config';
 
 export const runtime = 'nodejs';
 
