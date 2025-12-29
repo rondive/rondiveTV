@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # 清理任何潜在的缓存并安装所有依赖
-RUN pnpm store prune && pnpm install --frozen-lockfile --no-optional
+RUN pnpm store prune && pnpm install --frozen-lockfile
 
 # ---- 第 2 阶段：构建项目 ----
 FROM node:20-alpine AS builder

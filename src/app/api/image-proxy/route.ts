@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
-import { promises as fs, createReadStream } from 'fs';
-import path from 'path';
 import { createHash } from 'crypto';
+import { createReadStream, promises as fs } from 'fs';
+import { NextResponse } from 'next/server';
+import path from 'path';
 import { Readable } from 'stream';
 
 export const runtime = 'nodejs';
@@ -15,8 +15,10 @@ type CacheEntry = {
 };
 
 const CACHE_ROOT =
-  process.env.IMAGE_CACHE_DIR || path.join(process.cwd(), '.cache', 'image-proxy');
-const CACHE_TTL_MS = Number(process.env.IMAGE_CACHE_TTL_MS) || 1000 * 60 * 60 * 24 * 30;
+  process.env.IMAGE_CACHE_DIR ||
+  path.join(process.cwd(), '.cache', 'image-proxy');
+const CACHE_TTL_MS =
+  Number(process.env.IMAGE_CACHE_TTL_MS) || 1000 * 60 * 60 * 24 * 30;
 type FetchResult =
   | { type: 'ok'; buffer: Buffer; entry: CacheEntry }
   | { type: 'redirect' }
@@ -58,11 +60,7 @@ const readCache = async (url: string) => {
   }
 };
 
-const writeCache = async (
-  url: string,
-  buffer: Buffer,
-  entry: CacheEntry
-) => {
+const writeCache = async (url: string, buffer: Buffer, entry: CacheEntry) => {
   const { dir, dataPath, metaPath } = getCachePaths(url);
   await ensureDir(dir);
   await fs.writeFile(dataPath, buffer);
@@ -88,7 +86,7 @@ export async function GET(request: Request) {
     body: BodyInit,
     contentType?: string | null,
     etag?: string | null,
-    cacheStatus?: 'hit' | 'miss'
+    cacheStatus?: 'hit' | 'miss',
   ) => {
     const headers = new Headers();
     if (contentType) {
@@ -124,7 +122,12 @@ export async function GET(request: Request) {
     const cached = await readCache(imageUrl);
     if (cached) {
       const body = Readable.toWeb(cached.stream) as ReadableStream;
-      return buildImageResponse(body, cached.entry.contentType, cached.entry.etag, 'hit');
+      return buildImageResponse(
+        body,
+        cached.entry.contentType,
+        cached.entry.etag,
+        'hit',
+      );
     }
 
     let fetchPromise = inFlight.get(imageUrl);
@@ -152,7 +155,7 @@ export async function GET(request: Request) {
         if (imageResponse.status === 403 && isDoubanImage) {
           const tencentUrl = imageUrl.replace(
             /img\d*\.doubanio\.com/g,
-            'img.doubanio.cmliussss.net'
+            'img.doubanio.cmliussss.net',
           );
           if (tencentUrl && tencentUrl !== imageUrl) {
             const tencentResponse = await fetchImage(tencentUrl);
@@ -176,7 +179,11 @@ export async function GET(request: Request) {
           return { type: 'redirect' };
         }
 
-        return { type: 'error', status: imageResponse.status, statusText: imageResponse.statusText };
+        return {
+          type: 'error',
+          status: imageResponse.status,
+          statusText: imageResponse.statusText,
+        };
       })().finally(() => {
         inFlight.delete(imageUrl);
       });
@@ -185,11 +192,12 @@ export async function GET(request: Request) {
 
     const fetched = await fetchPromise;
     if (fetched.type === 'ok') {
+      const body = new Uint8Array(fetched.buffer);
       return buildImageResponse(
-        fetched.buffer,
+        body,
         fetched.entry.contentType,
         fetched.entry.etag,
-        'miss'
+        'miss',
       );
     }
 
@@ -199,12 +207,12 @@ export async function GET(request: Request) {
 
     return NextResponse.json(
       { error: fetched.statusText || 'Failed to fetch image' },
-      { status: fetched.status || 502 }
+      { status: fetched.status || 502 },
     );
   } catch (error) {
     return NextResponse.json(
       { error: 'Error fetching image' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

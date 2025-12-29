@@ -1,5 +1,6 @@
 /* eslint-disable no-console */
 
+import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import { createReadStream, createWriteStream, promises as fs } from 'node:fs';
@@ -8,8 +9,6 @@ import path from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { ReadableStream as NodeReadableStream } from 'node:stream/web';
-
-import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getConfig } from '@/lib/config';
@@ -52,7 +51,10 @@ function isPrivateHost(host: string): boolean {
 }
 
 function sanitizeFilename(input: string): string {
-  const sanitized = input.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+  const sanitized = input
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (!sanitized) return 'video';
   return sanitized.length > 150 ? sanitized.slice(0, 150).trim() : sanitized;
 }
@@ -150,14 +152,20 @@ function getSegmentExtension(raw: string): string | null {
   return withoutQuery.slice(dotIndex).toLowerCase();
 }
 
-function replaceSegmentExtension(raw: string, fromExt: string, toExt: string): string {
+function replaceSegmentExtension(
+  raw: string,
+  fromExt: string,
+  toExt: string,
+): string {
   const trimmed = raw.trim();
   if (!trimmed) return raw;
   const hashIndex = trimmed.indexOf('#');
   const queryIndex = trimmed.indexOf('?');
   const endIndexCandidates = [hashIndex, queryIndex].filter((idx) => idx >= 0);
   const endIndex =
-    endIndexCandidates.length > 0 ? Math.min(...endIndexCandidates) : trimmed.length;
+    endIndexCandidates.length > 0
+      ? Math.min(...endIndexCandidates)
+      : trimmed.length;
   const base = trimmed.slice(0, endIndex);
   const suffix = trimmed.slice(endIndex);
   if (base.toLowerCase().endsWith(fromExt)) {
@@ -168,7 +176,7 @@ function replaceSegmentExtension(raw: string, fromExt: string, toExt: string): s
 
 function rewriteSegmentExtensions(
   content: string,
-  mapping: Record<string, string>
+  mapping: Record<string, string>,
 ): string {
   const lines = content.split(/\r?\n/);
   const rewritten = lines.map((line) => {
@@ -190,7 +198,7 @@ function getFallbackExtensions(ext: string): string[] {
 
 function collectInvalidSegmentCandidates(
   content: string,
-  baseUrl: string
+  baseUrl: string,
 ): Array<{ ext: string; resolved: string }> {
   const lines = content.split(/\r?\n/);
   const candidates: Array<{ ext: string; resolved: string }> = [];
@@ -223,7 +231,7 @@ function isLikelyMediaBytes(buffer: Uint8Array): boolean {
       buffer[4] || 0,
       buffer[5] || 0,
       buffer[6] || 0,
-      buffer[7] || 0
+      buffer[7] || 0,
     );
     if (
       signature === 'ftyp' ||
@@ -238,7 +246,10 @@ function isLikelyMediaBytes(buffer: Uint8Array): boolean {
   return false;
 }
 
-async function probeSegmentContent(url: string, headers: Headers): Promise<boolean> {
+async function probeSegmentContent(
+  url: string,
+  headers: Headers,
+): Promise<boolean> {
   const probeHeaders = new Headers(headers);
   probeHeaders.set('Range', 'bytes=0-15');
   try {
@@ -264,7 +275,10 @@ async function probeSegmentContent(url: string, headers: Headers): Promise<boole
   }
 }
 
-function findInvalidSegmentLine(content: string, baseUrl: string): string | null {
+function findInvalidSegmentLine(
+  content: string,
+  baseUrl: string,
+): string | null {
   if (!hasMediaSegments(content)) return null;
   const lines = content.split(/\r?\n/);
   for (const line of lines) {
@@ -292,7 +306,7 @@ function hasEncryptionOrMap(content: string): boolean {
 async function areImageSegmentsMedia(
   content: string,
   baseUrl: string,
-  headers: Headers
+  headers: Headers,
 ): Promise<boolean> {
   const candidates = collectInvalidSegmentCandidates(content, baseUrl);
   if (candidates.length === 0) return false;
@@ -307,7 +321,7 @@ async function areImageSegmentsMedia(
 async function tryRewriteImageSegments(
   content: string,
   baseUrl: string,
-  headers: Headers
+  headers: Headers,
 ): Promise<string | null> {
   const candidates = collectInvalidSegmentCandidates(content, baseUrl);
   if (candidates.length === 0) return null;
@@ -326,7 +340,7 @@ async function tryRewriteImageSegments(
       const rewrittenUrl = replaceSegmentExtension(
         candidate.resolved,
         primaryExt,
-        fallbackExt
+        fallbackExt,
       );
       if (rewrittenUrl === candidate.resolved) {
         okCount = 0;
@@ -343,7 +357,10 @@ async function tryRewriteImageSegments(
       const rewritten = rewriteSegmentExtensions(content, {
         [primaryExt]: fallbackExt,
       });
-      if (hasMediaSegments(rewritten) && !findInvalidSegmentLine(rewritten, baseUrl)) {
+      if (
+        hasMediaSegments(rewritten) &&
+        !findInvalidSegmentLine(rewritten, baseUrl)
+      ) {
         return rewritten;
       }
     }
@@ -354,7 +371,7 @@ async function tryRewriteImageSegments(
 
 function filterInvalidSegments(
   content: string,
-  baseUrl: string
+  baseUrl: string,
 ): { content: string; removed: number } {
   if (!hasMediaSegments(content)) return { content, removed: 0 };
   const lines = content.split(/\r?\n/);
@@ -414,7 +431,10 @@ function filterInvalidSegments(
   return { content: filtered.join('\n'), removed };
 }
 
-function isLikelyPlayableMediaPlaylist(content: string, baseUrl: string): boolean {
+function isLikelyPlayableMediaPlaylist(
+  content: string,
+  baseUrl: string,
+): boolean {
   if (!looksLikeM3U8(content)) return false;
   if (!hasMediaSegments(content)) return false;
   return !findInvalidSegmentLine(content, baseUrl);
@@ -442,7 +462,7 @@ function detectUnsupportedFfmpegOptions(stderr: string): string[] {
 function buildProxyUrl(
   proxyBase: string,
   targetUrl: string,
-  token?: string | null
+  token?: string | null,
 ): string {
   const encodedTarget = Buffer.from(targetUrl, 'utf-8').toString('base64url');
   const params = new URLSearchParams({ u: encodedTarget });
@@ -454,7 +474,7 @@ function rewriteUriAttributes(
   line: string,
   baseUrl: string,
   proxyBase?: string,
-  token?: string | null
+  token?: string | null,
 ): string {
   return line.replace(/URI="([^"]+)"/g, (_, uri: string) => {
     let resolved = uri;
@@ -481,7 +501,7 @@ function sanitizeM3U8Content(
   content: string,
   baseUrl: string,
   proxyBase?: string,
-  token?: string | null
+  token?: string | null,
 ): string {
   if (!content) return '';
   const lines = content.split(/\r?\n/);
@@ -599,7 +619,7 @@ async function writeResponseToFile(response: Response, filePath: string) {
     return;
   }
   const readable = Readable.fromWeb(
-    response.body as unknown as NodeReadableStream
+    response.body as unknown as NodeReadableStream,
   ) as NodeJS.ReadableStream;
   await pipeline(readable, createWriteStream(filePath));
 }
@@ -608,7 +628,7 @@ async function fetchWithTimeout(
   url: string,
   headers: Headers,
   signal: AbortSignal | undefined,
-  timeoutMs: number
+  timeoutMs: number,
 ): Promise<Response> {
   const controller = new AbortController();
   const onAbort = () => controller.abort();
@@ -621,7 +641,11 @@ async function fetchWithTimeout(
   }
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   try {
-    return await fetch(url, { headers, redirect: 'follow', signal: controller.signal });
+    return await fetch(url, {
+      headers,
+      redirect: 'follow',
+      signal: controller.signal,
+    });
   } finally {
     clearTimeout(timeoutId);
     if (signal) {
@@ -651,7 +675,9 @@ async function downloadFileWithRetry(options: {
     } catch (error) {
       if (signal?.aborted) throw new Error('Download aborted');
       if (attempt >= retries) {
-        throw error instanceof Error ? error : new Error('Segment download failed');
+        throw error instanceof Error
+          ? error
+          : new Error('Segment download failed');
       }
       attempt += 1;
       await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
@@ -686,7 +712,10 @@ async function downloadHlsSegmentsParallel(options: {
       hasByterange = true;
       continue;
     }
-    if (line.startsWith('#EXT-X-PART') || line.startsWith('#EXT-X-PRELOAD-HINT')) {
+    if (
+      line.startsWith('#EXT-X-PART') ||
+      line.startsWith('#EXT-X-PRELOAD-HINT')
+    ) {
       hasPartial = true;
       continue;
     }
@@ -772,24 +801,24 @@ async function downloadHlsSegmentsParallel(options: {
     Math.floor(
       toNumber(
         process.env.DOWNLOAD_SEGMENT_CONCURRENCY,
-        DEFAULT_SEGMENT_CONCURRENCY
-      )
-    )
+        DEFAULT_SEGMENT_CONCURRENCY,
+      ),
+    ),
   );
   const retries = Math.max(
     0,
     Math.floor(
-      toNumber(process.env.DOWNLOAD_SEGMENT_RETRY, DEFAULT_SEGMENT_RETRY)
-    )
+      toNumber(process.env.DOWNLOAD_SEGMENT_RETRY, DEFAULT_SEGMENT_RETRY),
+    ),
   );
   const timeoutMs = Math.max(
     5000,
     Math.floor(
       toNumber(
         process.env.DOWNLOAD_SEGMENT_TIMEOUT_MS,
-        DEFAULT_SEGMENT_TIMEOUT_MS
-      )
-    )
+        DEFAULT_SEGMENT_TIMEOUT_MS,
+      ),
+    ),
   );
 
   const segmentsDir = path.join(tempDir, 'segments');
@@ -834,7 +863,7 @@ async function downloadHlsSegmentsParallel(options: {
     lastReport = now;
     const percent = Math.min(
       99,
-      Math.round((completed / segments.length) * 1000) / 10
+      Math.round((completed / segments.length) * 1000) / 10,
     );
     onProgress({
       percent: Number.isFinite(percent) ? percent : undefined,
@@ -946,7 +975,9 @@ type ExecuteDownloadResult = {
 };
 
 function hasMediaSegments(content: string): boolean {
-  return content.split(/\r?\n/).some((line) => line.trim().startsWith('#EXTINF'));
+  return content
+    .split(/\r?\n/)
+    .some((line) => line.trim().startsWith('#EXTINF'));
 }
 
 function parsePlaylistDurationMs(content: string): number | null {
@@ -971,7 +1002,10 @@ function isVodPlaylist(content: string): boolean {
   return /#EXT-X-ENDLIST/i.test(content);
 }
 
-function parseVariantStreams(content: string, baseUrl: string): Array<{
+function parseVariantStreams(
+  content: string,
+  baseUrl: string,
+): Array<{
   url: string;
   bandwidth: number;
 }> {
@@ -1009,7 +1043,10 @@ function parseVariantStreams(content: string, baseUrl: string): Array<{
   return variants;
 }
 
-async function fetchPlaylist(url: string, headers: Headers): Promise<PlaylistResult> {
+async function fetchPlaylist(
+  url: string,
+  headers: Headers,
+): Promise<PlaylistResult> {
   const response = await fetch(url, { headers, redirect: 'follow' });
   if (!response.ok) {
     throw new Error(`Playlist fetch failed with ${response.status}`);
@@ -1021,7 +1058,7 @@ async function fetchPlaylist(url: string, headers: Headers): Promise<PlaylistRes
 async function resolveMediaPlaylist(
   initialUrl: string,
   headers: Headers,
-  maxDepth = 3
+  maxDepth = 3,
 ): Promise<PlaylistResult> {
   let current = await fetchPlaylist(initialUrl, headers);
   const visited = new Set<string>();
@@ -1067,7 +1104,10 @@ function buildFilename(params: {
   episode?: string | null;
   episodeTitle?: string | null;
 }): string {
-  const title = sanitizeFilename(params.title || 'video').replace(/\.mp4$/i, '');
+  const title = sanitizeFilename(params.title || 'video').replace(
+    /\.mp4$/i,
+    '',
+  );
   const year = params.year ? sanitizeFilename(params.year) : '';
   const episodeLabel = params.episodeTitle
     ? sanitizeFilename(params.episodeTitle)
@@ -1163,7 +1203,7 @@ async function checkAndConsumeQuota(options: {
 }
 
 export async function executeDownloadCore(
-  options: ExecuteDownloadOptions
+  options: ExecuteDownloadOptions,
 ): Promise<ExecuteDownloadResult> {
   const {
     request,
@@ -1184,14 +1224,21 @@ export async function executeDownloadCore(
     throw new DownloadError('缺少播放地址', 400);
   }
 
-  const { url: normalizedUrl, headers: urlHeaders } = parseUrlWithHeaders(urlParam);
-  const userAgent = sanitizeHeaderValue(urlHeaders['User-Agent'] || DEFAULT_USER_AGENT);
+  const { url: normalizedUrl, headers: urlHeaders } =
+    parseUrlWithHeaders(urlParam);
+  const userAgent = sanitizeHeaderValue(
+    urlHeaders['User-Agent'] || DEFAULT_USER_AGENT,
+  );
   let referer = refererParam || urlHeaders.Referer || null;
   if (referer) {
     referer = sanitizeHeaderValue(referer);
   }
-  let origin = urlHeaders.Origin ? sanitizeHeaderValue(urlHeaders.Origin) : null;
-  const cookie = urlHeaders.Cookie ? sanitizeHeaderValue(urlHeaders.Cookie) : null;
+  let origin = urlHeaders.Origin
+    ? sanitizeHeaderValue(urlHeaders.Origin)
+    : null;
+  const cookie = urlHeaders.Cookie
+    ? sanitizeHeaderValue(urlHeaders.Cookie)
+    : null;
   const authorization = urlHeaders.Authorization
     ? sanitizeHeaderValue(urlHeaders.Authorization)
     : null;
@@ -1208,13 +1255,16 @@ export async function executeDownloadCore(
   }
 
   const requestHost = request.headers.get('host')?.split(':')[0]?.toLowerCase();
-  if (isPrivateHost(targetUrl.hostname) && targetUrl.hostname.toLowerCase() !== requestHost) {
+  if (
+    isPrivateHost(targetUrl.hostname) &&
+    targetUrl.hostname.toLowerCase() !== requestHost
+  ) {
     throw new DownloadError('目标地址被阻止', 403);
   }
 
   const adminConfig = await getConfig();
   const userEntry = adminConfig.UserConfig.Users.find(
-    (user) => user.username === username
+    (user) => user.username === username,
   );
   if (!userEntry || userEntry.banned) {
     throw new DownloadError('无权限', 403);
@@ -1223,7 +1273,7 @@ export async function executeDownloadCore(
   const limitEnabled = userEntry.downloadLimitEnabled !== false;
   const limitPerDay = Math.max(
     0,
-    Math.floor(toNumber(userEntry.downloadLimitPerDay, DEFAULT_DAILY_LIMIT))
+    Math.floor(toNumber(userEntry.downloadLimitPerDay, DEFAULT_DAILY_LIMIT)),
   );
 
   const quotaResult = await checkAndConsumeQuota({
@@ -1248,7 +1298,8 @@ export async function executeDownloadCore(
   }
 
   const refundQuota = async () => {
-    if (!limitEnabled || !quotaResult.cacheKey || !quotaResult.expireSeconds) return;
+    if (!limitEnabled || !quotaResult.cacheKey || !quotaResult.expireSeconds)
+      return;
     try {
       const rawCount = await db.getCache(quotaResult.cacheKey);
       const currentCount = Math.max(0, Math.floor(toNumber(rawCount, 0)));
@@ -1256,7 +1307,7 @@ export async function executeDownloadCore(
         await db.setCache(
           quotaResult.cacheKey,
           currentCount - 1,
-          quotaResult.expireSeconds
+          quotaResult.expireSeconds,
         );
       }
     } catch (error) {
@@ -1271,7 +1322,8 @@ export async function executeDownloadCore(
   const outputPath = path.join(tempDir, 'video.mp4');
   const urlParamLower = normalizedUrl.toLowerCase();
   const isHls =
-    targetUrl.pathname.toLowerCase().includes('.m3u8') || urlParamLower.includes('m3u8');
+    targetUrl.pathname.toLowerCase().includes('.m3u8') ||
+    urlParamLower.includes('m3u8');
   if (isHls && !referer) {
     referer = targetUrl.origin;
   }
@@ -1295,7 +1347,8 @@ export async function executeDownloadCore(
 
   const hostHeader = request.headers.get('host') || '';
   const hostParts = hostHeader.split(':');
-  const serverPort = process.env.PORT || (hostParts.length > 1 ? hostParts[1] : '3000');
+  const serverPort =
+    process.env.PORT || (hostParts.length > 1 ? hostParts[1] : '3000');
   const proxyBaseUrl =
     process.env.DOWNLOAD_PROXY_BASE_URL ||
     `http://127.0.0.1:${serverPort}/api/download/segment.ts`;
@@ -1357,7 +1410,7 @@ export async function executeDownloadCore(
             cookie: cookie || null,
             authorization: authorization || null,
           },
-          DOWNLOAD_PROXY_TTL_SECONDS
+          DOWNLOAD_PROXY_TTL_SECONDS,
         );
         proxyBase = proxyBaseUrl;
       } catch (error) {
@@ -1374,7 +1427,7 @@ export async function executeDownloadCore(
       try {
         const playlistResult = await resolveMediaPlaylist(
           targetUrl.toString(),
-          requestHeaders
+          requestHeaders,
         );
         if (!looksLikeM3U8(playlistResult.content)) {
           throw new Error('Playlist content is not a valid M3U8');
@@ -1383,7 +1436,8 @@ export async function executeDownloadCore(
         let allowImageSegments = false;
         let allowEncryptedImageSegments = false;
         const hasInvalidCandidates =
-          collectInvalidSegmentCandidates(contentToSanitize, playlistResult.url).length > 0;
+          collectInvalidSegmentCandidates(contentToSanitize, playlistResult.url)
+            .length > 0;
         const hasEncryption = hasEncryptionOrMap(contentToSanitize);
         if (hasInvalidCandidates) {
           if (hasEncryption) {
@@ -1393,7 +1447,7 @@ export async function executeDownloadCore(
             const imagesAreMedia = await areImageSegmentsMedia(
               contentToSanitize,
               playlistResult.url,
-              requestHeaders
+              requestHeaders,
             );
             if (imagesAreMedia) {
               allowImageSegments = true;
@@ -1401,11 +1455,13 @@ export async function executeDownloadCore(
               const rewritten = await tryRewriteImageSegments(
                 contentToSanitize,
                 playlistResult.url,
-                requestHeaders
+                requestHeaders,
               );
               if (rewritten) {
                 contentToSanitize = rewritten;
-                if (findInvalidSegmentLine(contentToSanitize, playlistResult.url)) {
+                if (
+                  findInvalidSegmentLine(contentToSanitize, playlistResult.url)
+                ) {
                   allowImageSegments = true;
                 }
               } else {
@@ -1427,25 +1483,30 @@ export async function executeDownloadCore(
               allowImageSegments: true,
               allowEncryptedImageSegments,
             },
-            DOWNLOAD_PROXY_TTL_SECONDS
+            DOWNLOAD_PROXY_TTL_SECONDS,
           );
         }
         const invalidSegment = allowImageSegments
           ? null
           : findInvalidSegmentLine(contentToSanitize, playlistResult.url);
         if (invalidSegment) {
-          const filtered = filterInvalidSegments(contentToSanitize, playlistResult.url);
+          const filtered = filterInvalidSegments(
+            contentToSanitize,
+            playlistResult.url,
+          );
           if (filtered.removed > 0 && hasMediaSegments(filtered.content)) {
             contentToSanitize = filtered.content;
           } else {
-            throw new Error(`Playlist contains non-media segment: ${invalidSegment}`);
+            throw new Error(
+              `Playlist contains non-media segment: ${invalidSegment}`,
+            );
           }
         }
         const sanitized = sanitizeM3U8Content(
           contentToSanitize,
           playlistResult.url,
           proxyBase,
-          proxyToken
+          proxyToken,
         );
         const playlistContent = hasMediaSegments(sanitized)
           ? sanitized
@@ -1454,7 +1515,8 @@ export async function executeDownloadCore(
           throw new Error('No playable media segments found in playlist');
         }
         expectedDurationMs =
-          isVodPlaylist(playlistContent) && parsePlaylistDurationMs(playlistContent)
+          isVodPlaylist(playlistContent) &&
+          parsePlaylistDurationMs(playlistContent)
             ? parsePlaylistDurationMs(playlistContent)
             : null;
 
@@ -1475,7 +1537,10 @@ export async function executeDownloadCore(
             }
           } catch (error) {
             if (process.env.NODE_ENV !== 'production') {
-              console.warn('Parallel segment download failed, fallback to ffmpeg.', error);
+              console.warn(
+                'Parallel segment download failed, fallback to ffmpeg.',
+                error,
+              );
             }
           }
         }
@@ -1485,7 +1550,7 @@ export async function executeDownloadCore(
         } else {
           const playlistPath = path.join(
             tempDir,
-            useProxy ? 'playlist-proxy.m3u8' : 'playlist.m3u8'
+            useProxy ? 'playlist-proxy.m3u8' : 'playlist.m3u8',
           );
           await fs.writeFile(playlistPath, playlistContent, 'utf-8');
           inputUrl = playlistPath;
@@ -1501,7 +1566,10 @@ export async function executeDownloadCore(
           }
         }
         if (process.env.NODE_ENV !== 'production') {
-          console.warn('Failed to sanitize playlist, fallback to direct URL.', error);
+          console.warn(
+            'Failed to sanitize playlist, fallback to direct URL.',
+            error,
+          );
         }
       }
     }
@@ -1570,7 +1638,10 @@ export async function executeDownloadCore(
         lastReport = now;
         const percent =
           expectedDurationMs && lastOutTimeMs > 0
-            ? Math.min(100, Math.max(0, (lastOutTimeMs / expectedDurationMs) * 100))
+            ? Math.min(
+                100,
+                Math.max(0, (lastOutTimeMs / expectedDurationMs) * 100),
+              )
             : undefined;
         onProgress({
           percent: percent ? Math.round(percent * 10) / 10 : undefined,
@@ -1668,7 +1739,11 @@ export async function executeDownloadCore(
             return;
           }
           if (code === 0) {
-            finalize({ ok: true, stderr: stderrOutput, outTimeMs: lastOutTimeMs });
+            finalize({
+              ok: true,
+              stderr: stderrOutput,
+              outTimeMs: lastOutTimeMs,
+            });
             return;
           }
           finalize({
@@ -1733,7 +1808,7 @@ export async function executeDownloadCore(
       throw new DownloadError(
         ffmpegResult.error?.message || 'FFmpeg failed',
         500,
-        ffmpegResult.stderr
+        ffmpegResult.stderr,
       );
     }
 
@@ -1778,7 +1853,8 @@ export async function executeDownloadCore(
           cleanupTemp,
         };
       } catch (error) {
-        lastError = error instanceof Error ? error : new Error('Download failed');
+        lastError =
+          error instanceof Error ? error : new Error('Download failed');
         if (!isHls) break;
       }
     }
@@ -1845,17 +1921,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (!result.outputPath || !result.filename || !result.cleanupTemp || !result.sizeBytes) {
+    if (
+      !result.outputPath ||
+      !result.filename ||
+      !result.cleanupTemp ||
+      !result.sizeBytes
+    ) {
       throw new DownloadError('Download failed', 500);
     }
 
     const headers = new Headers();
     headers.set('Content-Type', 'video/mp4');
     headers.set('Content-Length', String(result.sizeBytes));
-    const asciiFallback = result.filename.replace(/[^ -~]/g, '').trim() || 'video.mp4';
+    const asciiFallback =
+      result.filename.replace(/[^ -~]/g, '').trim() || 'video.mp4';
     headers.set(
       'Content-Disposition',
-      `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(result.filename)}`
+      `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(result.filename)}`,
     );
     headers.set('Cache-Control', 'no-store');
     if (result.quotaInfo.limitEnabled && result.quotaInfo.remaining !== null) {
@@ -1882,10 +1964,7 @@ export async function GET(request: NextRequest) {
     if (error instanceof DownloadError) {
       const status = error.status || 500;
       if (checkOnly) {
-        return NextResponse.json(
-          { error: error.message },
-          { status }
-        );
+        return NextResponse.json({ error: error.message }, { status });
       }
       return NextResponse.json(
         {
@@ -1893,14 +1972,16 @@ export async function GET(request: NextRequest) {
           details: error.message,
           stderr: error.stderr,
         },
-        { status }
+        { status },
       );
     }
     const details =
-      error instanceof Error ? error.message : 'FFmpeg failed to build download';
+      error instanceof Error
+        ? error.message
+        : 'FFmpeg failed to build download';
     return NextResponse.json(
       { error: 'Download failed', details: details.trim() },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

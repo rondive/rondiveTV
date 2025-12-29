@@ -1,7 +1,6 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { createReadStream, promises as fs } from 'node:fs';
 import { Readable } from 'node:stream';
-
-import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getJob, getJobFromCache } from '@/lib/download-jobs';
@@ -47,10 +46,11 @@ export async function GET(request: NextRequest) {
   const headers = new Headers();
   headers.set('Content-Type', 'video/mp4');
   headers.set('Content-Length', String(stats.size));
-  const asciiFallback = job.filename.replace(/[^ -~]/g, '').trim() || 'video.mp4';
+  const asciiFallback =
+    job.filename.replace(/[^ -~]/g, '').trim() || 'video.mp4';
   headers.set(
     'Content-Disposition',
-    `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(job.filename)}`
+    `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(job.filename)}`,
   );
   headers.set('Cache-Control', 'no-store');
 

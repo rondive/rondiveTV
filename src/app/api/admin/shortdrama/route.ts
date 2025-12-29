@@ -2,9 +2,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
-import { db } from '@/lib/db';
-import { clearConfigCache, getConfig } from '@/lib/config';
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { clearConfigCache, getConfig } from '@/lib/config';
+import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       {
         error: '不支持本地存储进行管理员配置',
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -32,16 +32,13 @@ export async function POST(request: NextRequest) {
 
     // 验证必填字段
     if (!primaryApiUrl) {
-      return NextResponse.json(
-        { error: '主API地址不能为空' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: '主API地址不能为空' }, { status: 400 });
     }
 
     if (enableAlternative && !alternativeApiUrl) {
       return NextResponse.json(
         { error: '启用备用API时必须提供备用API地址' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -67,10 +64,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('保存短剧配置失败:', error);
-    return NextResponse.json(
-      { error: '保存失败，请重试' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '保存失败，请重试' }, { status: 500 });
   }
 }
 
@@ -81,7 +75,7 @@ export async function GET(request: NextRequest) {
       {
         error: '不支持本地存储进行管理员配置',
       },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -105,9 +99,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('获取短剧配置失败:', error);
-    return NextResponse.json(
-      { error: '获取配置失败' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: '获取配置失败' }, { status: 500 });
   }
 }

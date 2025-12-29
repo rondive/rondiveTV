@@ -1,14 +1,14 @@
 /* eslint-disable no-console,@typescript-eslint/no-explicit-any */
 
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
 
-import { getConfig } from "@/lib/config";
+import { getConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 
 // 连接池管理
-import * as https from 'https';
 import * as http from 'http';
+import * as https from 'https';
 
 const httpsAgent = new https.Agent({
   keepAlive: true,
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const url = searchParams.get('url');
   const source = searchParams.get('moontv-source');
-  
+
   if (!url) {
     segmentStats.errors++;
     segmentStats.activeStreams--;
@@ -73,10 +73,10 @@ export async function GET(request: Request) {
       signal: controller.signal,
       headers: {
         'User-Agent': ua,
-        'Accept': 'video/mp2t, video/*, */*',
+        Accept: 'video/mp2t, video/*, */*',
         'Accept-Encoding': 'identity',
         'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
+        Connection: 'keep-alive',
       },
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore - Node.js specific option
@@ -87,13 +87,16 @@ export async function GET(request: Request) {
 
     if (!response.ok) {
       segmentStats.errors++;
-      return NextResponse.json({ 
-        error: `Failed to fetch segment: ${response.status} ${response.statusText}` 
-      }, { status: response.status >= 500 ? 500 : response.status });
+      return NextResponse.json(
+        {
+          error: `Failed to fetch segment: ${response.status} ${response.statusText}`,
+        },
+        { status: response.status >= 500 ? 500 : response.status },
+      );
     }
 
     const headers = new Headers();
-    
+
     // 设置内容类型 - 更精确的类型判断
     const originalContentType = response?.headers.get('Content-Type');
     if (originalContentType) {
@@ -101,89 +104,125 @@ export async function GET(request: Request) {
     } else {
       headers.set('Content-Type', 'video/mp2t');
     }
-    
+
     headers.set('Access-Control-Allow-Origin', '*');
     headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, HEAD');
-    headers.set('Access-Control-Allow-Headers', 'Content-Type, Range, Origin, Accept, User-Agent');
+    headers.set(
+      'Access-Control-Allow-Headers',
+      'Content-Type, Range, Origin, Accept, User-Agent',
+    );
     headers.set('Accept-Ranges', 'bytes');
-    headers.set('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Type, Accept-Ranges');
+    headers.set(
+      'Access-Control-Expose-Headers',
+      'Content-Length, Content-Range, Content-Type, Accept-Ranges',
+    );
     headers.set('Cache-Control', 'public, max-age=300'); // 5分钟缓存
-    
+
     // 复制原始响应的重要头部
-    const importantHeaders = ['Content-Length', 'Content-Range', 'Last-Modified', 'ETag'];
-    importantHeaders.forEach(header => {
+    const importantHeaders = [
+      'Content-Length',
+      'Content-Range',
+      'Last-Modified',
+      'ETag',
+    ];
+    importantHeaders.forEach((header) => {
       const value = response?.headers.get(header);
       if (value) {
         headers.set(header, value);
       }
     });
 
-    const _contentLength = parseInt(response?.headers.get('content-length') || '0', 10);
+    const _contentLength = parseInt(
+      response?.headers.get('content-length') || '0',
+      10,
+    );
     let bytesTransferred = 0;
 
     // 优化的流式传输，带背压控制
-    const stream = new ReadableStream({
-      start(controller) {
-        if (!response?.body) {
-          controller.close();
-          segmentStats.activeStreams--;
-          return;
-        }
-
-        reader = response?.body?.getReader();
-        const isCancelled = false;
-
-        function pump(): void {
-          if (isCancelled || !reader) {
+    const stream = new ReadableStream(
+      {
+        start(controller) {
+          if (!response?.body) {
+            controller.close();
+            segmentStats.activeStreams--;
             return;
           }
 
-          reader.read().then(({ done, value }) => {
-            if (isCancelled) {
+          reader = response?.body?.getReader();
+          const isCancelled = false;
+
+          function pump(): void {
+            if (isCancelled || !reader) {
               return;
             }
 
-            if (done) {
-              controller.close();
-              cleanup();
-              
-              // 更新统计信息
-              const responseTime = Date.now() - startTime;
-              segmentStats.avgResponseTime = 
-                (segmentStats.avgResponseTime * (segmentStats.requests - 1) + responseTime) / segmentStats.requests;
-              segmentStats.totalBytes += bytesTransferred;
-              segmentStats.activeStreams--;
-              
-              return;
-            }
+            reader
+              .read()
+              .then(({ done, value }) => {
+                if (isCancelled) {
+                  return;
+                }
 
-            if (value) {
-              bytesTransferred += value.byteLength;
-            }
+                if (done) {
+                  controller.close();
+                  cleanup();
 
-            try {
-              controller.enqueue(value);
-            } catch (e) {
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('Failed to enqueue chunk:', e);
+                  // 更新统计信息
+                  const responseTime = Date.now() - startTime;
+                  segmentStats.avgResponseTime =
+                    (segmentStats.avgResponseTime *
+                      (segmentStats.requests - 1) +
+                      responseTime) /
+                    segmentStats.requests;
+                  segmentStats.totalBytes += bytesTransferred;
+                  segmentStats.activeStreams--;
+
+                  return;
+                }
+
+                if (value) {
+                  bytesTransferred += value.byteLength;
+                }
+
+                try {
+                  controller.enqueue(value);
+                } catch (e) {
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn('Failed to enqueue chunk:', e);
+                  }
+                  cleanup();
+                  return;
+                }
+
+                pump();
+              })
+              .catch((error) => {
+                if (!isCancelled) {
+                  if (process.env.NODE_ENV === 'development') {
+                    console.warn('Stream pump error:', error);
+                  }
+                  controller.error(error);
+                  cleanup();
+                }
+              });
+          }
+
+          function cleanup() {
+            if (reader) {
+              try {
+                reader.releaseLock();
+              } catch (e) {
+                // reader 可能已经被释放，忽略错误
               }
-              cleanup();
-              return;
+              reader = null;
             }
-            
-            pump();
-          }).catch((error) => {
-            if (!isCancelled) {
-              if (process.env.NODE_ENV === 'development') {
-                console.warn('Stream pump error:', error);
-              }
-              controller.error(error);
-              cleanup();
-            }
-          });
-        }
+            segmentStats.activeStreams--;
+          }
 
-        function cleanup() {
+          pump();
+        },
+        cancel() {
+          // 当流被取消时，确保释放所有资源
           if (reader) {
             try {
               reader.releaseLock();
@@ -192,47 +231,33 @@ export async function GET(request: Request) {
             }
             reader = null;
           }
+
+          if (response?.body) {
+            try {
+              response.body.cancel();
+            } catch (e) {
+              // 忽略取消时的错误
+            }
+          }
+
           segmentStats.activeStreams--;
-        }
-
-        pump();
+        },
       },
-      cancel() {
-        // 当流被取消时，确保释放所有资源
-        if (reader) {
-          try {
-            reader.releaseLock();
-          } catch (e) {
-            // reader 可能已经被释放，忽略错误
-          }
-          reader = null;
-        }
-
-        if (response?.body) {
-          try {
-            response.body.cancel();
-          } catch (e) {
-            // 忽略取消时的错误
-          }
-        }
-        
-        segmentStats.activeStreams--;
-      }
-    }, {
-      // 添加背压控制
-      highWaterMark: 65536, // 64KB 缓冲区
-      size(chunk) {
-        return chunk ? chunk.byteLength : 0;
-      }
-    });
+      {
+        // 添加背压控制
+        highWaterMark: 65536, // 64KB 缓冲区
+        size(chunk) {
+          return chunk ? chunk.byteLength : 0;
+        },
+      },
+    );
 
     return new Response(stream, { headers });
-    
   } catch (error: any) {
     segmentStats.errors++;
     segmentStats.activeStreams--;
     clearTimeout(timeoutId);
-    
+
     // 确保在错误情况下也释放资源
     if (reader) {
       try {
@@ -252,27 +277,41 @@ export async function GET(request: Request) {
 
     // 处理不同类型的错误
     if (error.name === 'AbortError') {
-      return NextResponse.json({ error: 'Segment request timeout' }, { status: 408 });
+      return NextResponse.json(
+        { error: 'Segment request timeout' },
+        { status: 408 },
+      );
     }
-    
+
     if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
-      return NextResponse.json({ error: 'Network connection failed' }, { status: 503 });
+      return NextResponse.json(
+        { error: 'Network connection failed' },
+        { status: 503 },
+      );
     }
 
     if (process.env.NODE_ENV === 'development') {
       console.error('Segment proxy error:', error);
     }
-    return NextResponse.json({ 
-      error: 'Failed to fetch segment',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
-    }, { status: 500 });
-    
+    return NextResponse.json(
+      {
+        error: 'Failed to fetch segment',
+        details:
+          process.env.NODE_ENV === 'development' ? error.message : undefined,
+      },
+      { status: 500 },
+    );
   } finally {
     clearTimeout(timeoutId);
-    
+
     // 定期打印统计信息
-    if (segmentStats.requests % 500 === 0 && process.env.NODE_ENV === 'development') {
-      console.log(`Segment Proxy Stats - Requests: ${segmentStats.requests}, Active: ${segmentStats.activeStreams}, Errors: ${segmentStats.errors}, Avg Time: ${segmentStats.avgResponseTime.toFixed(2)}ms, Total: ${(segmentStats.totalBytes / 1024 / 1024).toFixed(2)}MB`);
+    if (
+      segmentStats.requests % 500 === 0 &&
+      process.env.NODE_ENV === 'development'
+    ) {
+      console.log(
+        `Segment Proxy Stats - Requests: ${segmentStats.requests}, Active: ${segmentStats.activeStreams}, Errors: ${segmentStats.errors}, Avg Time: ${segmentStats.avgResponseTime.toFixed(2)}ms, Total: ${(segmentStats.totalBytes / 1024 / 1024).toFixed(2)}MB`,
+      );
     }
   }
 }

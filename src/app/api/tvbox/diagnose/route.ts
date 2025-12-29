@@ -1,5 +1,6 @@
 /* eslint-disable no-console, @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
+
 import { GET as getTVBoxConfig } from '../route';
 
 export const runtime = 'nodejs';
@@ -43,9 +44,9 @@ function isPrivateHost(urlStr: string): boolean {
   }
 }
 
-async function tryFetchHead(
+async function _tryFetchHead(
   url: string,
-  timeoutMs = 3500
+  timeoutMs = 3500,
 ): Promise<{ ok: boolean; status?: number; error?: string }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -66,9 +67,7 @@ async function tryFetchHead(
 }
 
 // 调用 health 端点检查 spider jar 健康状态
-async function checkSpiderHealth(
-  spider: string
-): Promise<{
+async function checkSpiderHealth(spider: string): Promise<{
   accessible: boolean;
   status?: number;
   contentLength?: string;
@@ -111,7 +110,7 @@ export async function GET(req: NextRequest) {
     if (!baseUrl) {
       return NextResponse.json(
         { ok: false, error: 'cannot determine base url' },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -119,7 +118,10 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const token = searchParams.get('token');
 
-    console.log('[Diagnose] Backend - Received token:', token ? '***' + token.slice(-4) : 'none');
+    console.log(
+      '[Diagnose] Backend - Received token:',
+      token ? '***' + token.slice(-4) : 'none',
+    );
     console.log('[Diagnose] Backend - Request URL:', req.url);
 
     // 直接调用 tvbox API 函数，而不是通过 HTTP fetch
@@ -129,7 +131,10 @@ export async function GET(req: NextRequest) {
       configUrl += `&token=${encodeURIComponent(token)}`;
     }
 
-    console.log('[Diagnose] Backend - Direct calling tvbox GET with URL:', configUrl);
+    console.log(
+      '[Diagnose] Backend - Direct calling tvbox GET with URL:',
+      configUrl,
+    );
 
     // 创建模拟请求
     const mockRequest = new NextRequest(configUrl, {
@@ -207,7 +212,7 @@ export async function GET(req: NextRequest) {
 
       // 检查私网地址
       const privateApis = sites.filter(
-        (s: any) => typeof s?.api === 'string' && isPrivateHost(s.api)
+        (s: any) => typeof s?.api === 'string' && isPrivateHost(s.api),
       ).length;
       result.privateApis = privateApis;
       if (privateApis > 0) {
@@ -231,7 +236,7 @@ export async function GET(req: NextRequest) {
 
           if (!healthCheck.accessible) {
             result.issues.push(
-              `spider unreachable: ${healthCheck.status || healthCheck.error}`
+              `spider unreachable: ${healthCheck.status || healthCheck.error}`,
             );
           } else {
             // 验证文件大小（spider jar 通常大于 100KB）
@@ -240,7 +245,7 @@ export async function GET(req: NextRequest) {
               result.spiderSizeKB = Math.round(sizeKB);
               if (sizeKB < 50) {
                 result.issues.push(
-                  `spider jar size suspicious: ${result.spiderSizeKB}KB (expected >100KB)`
+                  `spider jar size suspicious: ${result.spiderSizeKB}KB (expected >100KB)`,
                 );
               }
             }
@@ -261,7 +266,7 @@ export async function GET(req: NextRequest) {
     console.error('Diagnose failed', e);
     return NextResponse.json(
       { ok: false, error: e?.message || 'unknown error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
